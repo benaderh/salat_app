@@ -1,0 +1,409 @@
+package com.salat.times
+
+import android.app.AlarmManager
+import android.app.AlertDialog
+import android.content.Context
+import android.content.Intent
+import android.os.Build
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.view.LayoutInflater
+import android.view.View
+import android.widget.PopupMenu
+import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import com.salat.times.alarm.AlarmScheduler
+import com.salat.times.data.PrefsManager
+import com.salat.times.data.SalatDataRepository
+import com.salat.times.model.ComputedDay
+import com.salat.times.model.PrayerKey
+import com.salat.times.util.ArabicNames
+import java.io.File
+import java.time.Duration
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+
+class MainActivity : AppCompatActivity() {
+
+    private lateinit var repo: SalatDataRepository
+    private lateinit var prefs: PrefsManager
+
+    private lateinit var tvDateGreg: TextView
+    private lateinit var tvDateHijri: TextView
+    private lateinit var tvChourouk: TextView
+    private lateinit var tvClock: TextView
+    private lateinit var btnMenu: View
+    private lateinit var btnPrev: View
+    private lateinit var btnNow: View
+    private lateinit var btnNext: View
+
+    private lateinit var rowFajr: android.widget.LinearLayout
+    private lateinit var rowDhohr: android.widget.LinearLayout
+    private lateinit var rowAsr: android.widget.LinearLayout
+    private lateinit var rowMaghreb: android.widget.LinearLayout
+    private lateinit var rowIsha: android.widget.LinearLayout
+
+    private var displayedDate: LocalDate = LocalDate.now()
+    private var isToday: Boolean = true
+
+    // Pour faire redisparaitre le label de priere / le chourouk apres quelques secondes
+    private val hideHandler = Handler(Looper.getMainLooper())
+    private var hideLabelRunnable: Runnable? = null
+    private var hideChouroukRunnable: Runnable? = null
+    private val REVEAL_DURATION_MS = 3000L
+
+    private val handler = Handler(Looper.getMainLooper())
+    private val tickRunnable = object : Runnable {
+        override fun run() {
+            updateClockAndProgress()
+            handler.postDelayed(this, 1000L)
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+        applyImmersiveFullscreen()
+
+        repo = SalatDataRepository.get(this)
+        prefs = PrefsManager(this)
+
+        tvDateGreg = findViewById(R.id.tvDateGreg)
+        tvDateHijri = findViewById(R.id.tvDateHijri)
+        tvChourouk = findViewById(R.id.tvChourouk)
+        tvClock = findViewById(R.id.tvClock)
+        btnMenu = findViewById(R.id.btnMenu)
+        btnPrev = findViewById(R.id.btnPrev)
+        btnNow = findViewById(R.id.btnNow)
+        btnNext = findViewById(R.id.btnNext)
+
+        rowFajr = findViewById(R.id.rowFajr)
+        rowDhohr = findViewById(R.id.rowDhohr)
+        rowAsr = findViewById(R.id.rowAsr)
+        rowMaghreb = findViewById(R.id.rowMaghreb)
+        rowIsha = findViewById(R.id.rowIsha)
+
+        inflatePrayerRows()
+
+        tvDateHijri.setOnClickListener { revealChourouk() }
+
+        btnMenu.setOnClickListener { showMenu(it) }
+        btnPrev.setOnClickListener {
+            displayedDate = displayedDate.minusDays(1)
+            isToday = displayedDate == LocalDate.now()
+            renderDay()
+        }
+        btnNext.setOnClickListener {
+            displayedDate = displayedDate.plusDays(1)
+            isToday = displayedDate == LocalDate.now()
+            renderDay()
+        }
+        btnNow.setOnClickListener {
+            displayedDate = LocalDate.now()
+            isToday = true
+            renderDay()
+        }
+
+        maybeRequestBatteryExemption()
+        ensureExactAlarmPermission()
+        AlarmScheduler.rescheduleAll(this)
+
+        renderDay()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Reflechir les eventuels changements (ville/alarmes modifies dans les ecrans de reglages)
+        prefs = PrefsManager(this)
+        renderDay()
+        handler.post(tickRunnable)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        handler.removeCallbacks(tickRunnable)
+        hideLabelRunnable?.let { hideHandler.removeCallbacks(it) }
+        hideChouroukRunnable?.let { hideHandler.removeCallbacks(it) }
+    }
+
+    private fun applyImmersiveFullscreen() {
+        window.decorView.systemUiVisibility = (
+            View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                or View.SYSTEM_UI_FLAG_FULLSCREEN
+                or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+            )
+    }
+
+    private data class RowHolder(
+        val root: View,
+        val name: TextView,
+        val time: TextView,
+        val elapsed: TextView,
+        val remaining: TextView
+    )
+
+    private lateinit var holderFajr: RowHolder
+    private lateinit var holderDhohr: RowHolder
+    private lateinit var holderAsr: RowHolder
+    private lateinit var holderMaghreb: RowHolder
+    private lateinit var holderIsha: RowHolder
+
+    private fun inflatePrayerRows() {
+        val inflater = LayoutInflater.from(this)
+        holderFajr = inflateInto(rowFajr, inflater, getString(R.string.fajr))
+        holderDhohr = inflateInto(rowDhohr, inflater, getString(R.string.dhohr))
+        holderAsr = inflateInto(rowAsr, inflater, getString(R.string.asr))
+        holderMaghreb = inflateInto(rowMaghreb, inflater, getString(R.string.maghreb))
+        holderIsha = inflateInto(rowIsha, inflater, getString(R.string.isha))
+    }
+
+    private fun inflateInto(parent: android.widget.LinearLayout, inflater: LayoutInflater, label: String): RowHolder {
+        val view = inflater.inflate(R.layout.item_prayer_row, parent, true)
+        val nameTv = parent.findViewById<TextView>(R.id.tvPrayerName)
+        val timeTv = parent.findViewById<TextView>(R.id.tvPrayerTime)
+        val elapsedTv = parent.findViewById<TextView>(R.id.tvElapsed)
+        val remainingTv = parent.findViewById<TextView>(R.id.tvRemaining)
+        nameTv.text = label
+        val holder = RowHolder(parent, nameTv, timeTv, elapsedTv, remainingTv)
+        view.setOnClickListener { revealLabel(holder) }
+        return holder
+    }
+
+    /** Affiche temporairement le nom de la priere (point 3), puis le recache. */
+    private fun revealLabel(holder: RowHolder) {
+        hideLabelRunnable?.let { hideHandler.removeCallbacks(it) }
+        // Recacher tous les autres labels d'abord
+        listOf(holderFajr, holderDhohr, holderAsr, holderMaghreb, holderIsha).forEach {
+            if (it !== holder) it.name.visibility = View.INVISIBLE
+        }
+        holder.name.visibility = View.VISIBLE
+        val r = Runnable { holder.name.visibility = View.INVISIBLE }
+        hideLabelRunnable = r
+        hideHandler.postDelayed(r, REVEAL_DURATION_MS)
+    }
+
+    /** Affiche temporairement le Chourouk (lever du soleil) (point 3), puis le recache. */
+    private fun revealChourouk() {
+        hideChouroukRunnable?.let { hideHandler.removeCallbacks(it) }
+        val day = repo.computeDay(displayedDate, prefs.villeId)
+        val chouroukTime = day.chourouk
+        tvChourouk.text = getString(R.string.chourouk_label) + (chouroukTime ?: "--:--")
+        tvChourouk.visibility = View.VISIBLE
+        val r = Runnable { tvChourouk.visibility = View.GONE }
+        hideChouroukRunnable = r
+        hideHandler.postDelayed(r, REVEAL_DURATION_MS)
+    }
+
+    private fun showMenu(anchor: View) {
+        val popup = PopupMenu(this, anchor)
+        popup.menu.add(0, 1, 0, getString(R.string.menu_select_city))
+        popup.menu.add(0, 2, 1, getString(R.string.menu_alarms))
+        popup.menu.add(0, 3, 2, getString(R.string.menu_import_data))
+        if (prefs.useImportedData) {
+            popup.menu.add(0, 4, 3, getString(R.string.cancel_import))
+        }
+        popup.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                1 -> startActivity(Intent(this, SettingsVilleActivity::class.java))
+                2 -> startActivity(Intent(this, SettingsAlarmesActivity::class.java))
+                3 -> confirmImportData()
+                4 -> confirmCancelImport()
+            }
+            true
+        }
+        popup.show()
+    }
+
+    private fun confirmImportData() {
+        val file = SalatDataRepository.importFile()
+        if (!file.exists()) {
+            Toast.makeText(this, getString(R.string.import_not_found), Toast.LENGTH_LONG).show()
+            return
+        }
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.import_confirm_title))
+            .setMessage(getString(R.string.import_confirm_body))
+            .setPositiveButton(getString(R.string.save)) { _, _ -> doImport(file) }
+            .setNegativeButton(getString(R.string.cancel), null)
+            .show()
+    }
+
+    private fun doImport(file: File) {
+        try {
+            val text = file.readText(Charsets.UTF_8)
+            SalatDataRepository.validateJsonText(text)
+            prefs.useImportedData = true
+            repo = SalatDataRepository.reload(this)
+            AlarmScheduler.rescheduleAll(this)
+            Toast.makeText(this, getString(R.string.import_success), Toast.LENGTH_SHORT).show()
+            renderDay()
+        } catch (e: Exception) {
+            Toast.makeText(this, getString(R.string.import_error), Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun confirmCancelImport() {
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.import_cancel_title))
+            .setMessage(getString(R.string.import_cancel_body))
+            .setPositiveButton(getString(R.string.save)) { _, _ ->
+                prefs.useImportedData = false
+                repo = SalatDataRepository.reload(this)
+                AlarmScheduler.rescheduleAll(this)
+                renderDay()
+            }
+            .setNegativeButton(getString(R.string.cancel), null)
+            .show()
+    }
+
+    private fun renderDay() {
+        val villeId = prefs.villeId
+        val day = repo.computeDay(displayedDate, villeId)
+        renderDateLines(day)
+        renderPrayerRows(day)
+        tvChourouk.visibility = View.GONE
+        updateClockAndProgress()
+    }
+
+    private fun renderDateLines(day: ComputedDay) {
+        val weekDay = ArabicNames.weekDayName(day.gregorianDate)
+        val gregStr = "${day.gregorianDate.dayOfMonth} ${gregMonthName(day.gregorianDate.monthValue)} ${day.gregorianDate.year}"
+        // Point 6 : pas de virgule entre jour de semaine et date
+        tvDateGreg.text = "$weekDay $gregStr"
+
+        if (day.hijriMonth != null && day.hijriDay != null && day.hijriYear != null) {
+            val hijriStr = "${day.hijriDay} " + ArabicNames.hijriMonthName(day.hijriMonth) + " ${day.hijriYear}"
+            tvDateHijri.text = hijriStr
+            tvDateHijri.visibility = View.VISIBLE
+        } else {
+            // Hors plage hijri connue (fallback ref_hor) : pas de mois hijri disponible
+            tvDateHijri.text = ""
+            tvDateHijri.visibility = View.GONE
+        }
+    }
+
+    private fun gregMonthName(month: Int): String = arrayOf(
+        "جانفي", "فيفري", "مارس", "أفريل", "ماي", "جوان",
+        "جويلية", "أوت", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"
+    )[month - 1]
+
+    private fun renderPrayerRows(day: ComputedDay) {
+        setRow(holderFajr, day.fajr)
+        setRow(holderDhohr, day.dhohr)
+        setRow(holderAsr, day.asr)
+        setRow(holderMaghreb, day.maghreb)
+        setRow(holderIsha, day.isha)
+    }
+
+    private fun setRow(holder: RowHolder, time: String?) {
+        holder.time.text = time ?: "--:--"
+        holder.time.setTextColor(getColor(R.color.text_secondary))
+        holder.time.setTypeface(null, android.graphics.Typeface.NORMAL)
+        holder.name.setTextColor(getColor(R.color.accent_gold))
+        holder.name.visibility = View.INVISIBLE
+        holder.elapsed.visibility = View.GONE
+        holder.remaining.visibility = View.GONE
+    }
+
+    /** Met a jour l'horloge en direct (hh:mm:ss) + determine prochaine priere + affiche ecoule/restant. */
+    private fun updateClockAndProgress() {
+        val now = LocalDateTime.now()
+        // Point 5 : horloge hh:mm:ss mise a jour chaque seconde
+        tvClock.text = now.format(DateTimeFormatter.ofPattern("HH:mm:ss"))
+
+        if (!isToday) {
+            // Sur un autre jour que aujourd'hui, pas de calcul ecoule/restant ni surbrillance
+            return
+        }
+
+        val day = repo.computeDay(displayedDate, prefs.villeId)
+        val prayers = listOf(
+            Triple(PrayerKey.FAJR, day.fajr, holderFajr),
+            Triple(PrayerKey.DHOHR, day.dhohr, holderDhohr),
+            Triple(PrayerKey.ASR, day.asr, holderAsr),
+            Triple(PrayerKey.MAGHREB, day.maghreb, holderMaghreb),
+            Triple(PrayerKey.ISHA, day.isha, holderIsha)
+        ).mapNotNull { (k, t, h) -> if (t != null) Triple(k, LocalTime.parse(t), h) else null }
+
+        if (prayers.isEmpty()) return
+
+        val nowTime = now.toLocalTime()
+        // Trouve la priere precedente (la derniere dont l'heure est <= maintenant) et la suivante
+        var prevIndex = -1
+        for (i in prayers.indices) {
+            if (!prayers[i].second.isAfter(nowTime)) prevIndex = i else break
+        }
+        val nextIndex = if (prevIndex + 1 < prayers.size) prevIndex + 1 else -1
+
+        // Reinitialiser les styles temps/couleurs (mais pas la visibilite du label, geree par clic)
+        prayers.forEach { (_, _, h) ->
+            h.elapsed.visibility = View.GONE
+            h.remaining.visibility = View.GONE
+            h.time.setTextColor(getColor(R.color.text_secondary))
+            h.time.setTypeface(null, android.graphics.Typeface.NORMAL)
+        }
+
+        // Priere precedente : temps ecoule depuis son heure, a gauche, rouge, format hh:mm
+        if (prevIndex >= 0) {
+            val (_, t, h) = prayers[prevIndex]
+            val elapsed = Duration.between(t, nowTime)
+            h.elapsed.text = formatHhMm(elapsed)
+            h.elapsed.visibility = View.VISIBLE
+        }
+
+        // Priere suivante : couleur differente + gras + temps restant a droite, vert, format hh:mm
+        if (nextIndex >= 0) {
+            val (_, t, h) = prayers[nextIndex]
+            val remaining = Duration.between(nowTime, t)
+            h.time.setTextColor(getColor(R.color.next_prayer_color))
+            h.time.setTypeface(null, android.graphics.Typeface.BOLD)
+            h.remaining.text = formatHhMm(remaining)
+            h.remaining.visibility = View.VISIBLE
+        } else if (prevIndex == prayers.size - 1) {
+            // Apres Isha : la "suivante" est le Fajr du lendemain -> on le calcule pour info
+            val tomorrow = repo.computeDay(displayedDate.plusDays(1), prefs.villeId)
+            tomorrow.fajr?.let { fajrStr ->
+                val fajrDateTime = LocalDateTime.of(displayedDate.plusDays(1), LocalTime.parse(fajrStr))
+                val remaining = Duration.between(now, fajrDateTime)
+                holderFajr.time.setTextColor(getColor(R.color.next_prayer_color))
+                holderFajr.time.setTypeface(null, android.graphics.Typeface.BOLD)
+                holderFajr.remaining.text = formatHhMm(remaining)
+                holderFajr.remaining.visibility = View.VISIBLE
+            }
+        }
+    }
+
+    /** Formate une duree en hh:mm (point 4). */
+    private fun formatHhMm(d: Duration): String {
+        val total = d.seconds.coerceAtLeast(0)
+        val h = total / 3600
+        val m = (total % 3600) / 60
+        return "%02d:%02d".format(h, m)
+    }
+
+    private fun maybeRequestBatteryExemption() {
+        if (!prefs.batteryPromptShown) {
+            startActivity(Intent(this, BatteryPermissionActivity::class.java))
+        }
+    }
+
+    private fun ensureExactAlarmPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val am = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            if (!am.canScheduleExactAlarms()) {
+                try {
+                    startActivity(Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM))
+                } catch (e: Exception) {
+                    // certains OEM n'ont pas cet ecran, ignorer
+                }
+            }
+        }
+    }
+}

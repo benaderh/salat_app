@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="text_date_greg">18sp</dimen>
+    <dimen name="text_date_hijri">20sp</dimen>
+    <dimen name="text_clock">46sp</dimen>
+    <dimen name="text_prayer_name">15sp</dimen>
+    <dimen name="text_prayer_time">36sp</dimen>
+    <dimen name="text_elapsed_remaining">20sp</dimen>
+    <dimen name="text_nav_button">17sp</dimen>
+    <dimen name="text_chourouk">14sp</dimen>
+    <dimen name="padding_screen">14dp</dimen>
+</resources>

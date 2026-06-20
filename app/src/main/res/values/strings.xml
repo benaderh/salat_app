@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">مواقيت الصلاة</string>
+    <string name="select_city">اختيار المدينة</string>
+    <string name="alarm_settings">إعدادات التنبيهات</string>
+    <string name="choose_sound">اختيار الصوت</string>
+    <string name="silent_mode">الوضع الصامت</string>
+
+    <string name="fajr">الفجر</string>
+    <string name="dhohr">الظهر</string>
+    <string name="asr">العصر</string>
+    <string name="maghreb">المغرب</string>
+    <string name="isha">العشاء</string>
+
+    <string name="previous">السابق</string>
+    <string name="now">الآن</string>
+    <string name="next">التالي</string>
+
+    <string name="elapsed">مضى</string>
+    <string name="remaining">يتبقى</string>
+
+    <string name="menu_select_city">اختيار المدينة</string>
+    <string name="menu_alarms">التنبيهات والوضع الصامت</string>
+    <string name="menu_import_data">استيراد بيانات (JSON)</string>
+
+    <string name="import_success">تم استيراد البيانات بنجاح</string>
+    <string name="import_not_found">لم يتم العثور على ملف salat_data.json في: /storage/emulated/0/SalatAthan/</string>
+    <string name="import_error">خطأ: الملف غير صالح</string>
+    <string name="import_confirm_title">استيراد بيانات جديدة</string>
+    <string name="import_confirm_body">سيتم استبدال البيانات الحالية بالملف الموجود في SalatAthan. هل تريد المتابعة؟</string>
+    <string name="import_cancel_title">إلغاء الاستيراد</string>
+    <string name="import_cancel_body">سيتم الرجوع إلى البيانات الأصلية للتطبيق. هل تريد المتابعة؟</string>
+    <string name="import_using_custom">البيانات الحالية: ملف مستورد</string>
+    <string name="import_using_default">البيانات الحالية: الملف الأصلي</string>
+    <string name="cancel_import">إلغاء الاستيراد والرجوع للأصل</string>
+
+    <string name="chourouk_label">الشروق: </string>
+
+    <string name="alarm_before">تنبيه قبل الوقت</string>
+    <string name="alarm_at_time">تنبيه عند الوقت</string>
+    <string name="minutes_before">عدد الدقائق قبل</string>
+    <string name="enable">تفعيل</string>
+    <string name="disable">تعطيل</string>
+    <string name="select_mp3">اختيار ملف mp3</string>
+    <string name="no_mp3_found">لا توجد ملفات صوتية في: /storage/emulated/0/SalatAthan/</string>
+    <string name="silent_duration">مدة الوضع الصامت (بالدقائق)</string>
+
+    <string name="battery_perm_title">إذن ضروري لعمل التنبيهات بدقة</string>
+    <string name="battery_perm_body">لكي تعمل التنبيهات في وقتها بالضبط، يجب استثناء التطبيق من تحسين البطارية والسماح له بالعمل في الخلفية.</string>
+    <string name="battery_perm_grant">السماح الآن</string>
+    <string name="battery_perm_skip">لاحقًا</string>
+
+    <string name="save">حفظ</string>
+    <string name="cancel">إلغاء</string>
+</resources>

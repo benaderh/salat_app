@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_dark"
+    android:layoutDirection="rtl"
+    android:padding="@dimen/padding_screen">
+
+    <!-- Menu 3 points en haut -->
+    <ImageButton
+        android:id="@+id/btnMenu"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentStart="true"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_more_vert"
+        android:contentDescription="@string/menu_select_city" />
+
+    <!-- Colonne verticale centrale avec toutes les lignes -->
+    <LinearLayout
+        android:id="@+id/mainColumn"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/btnMenu"
+        android:layout_above="@id/navRow"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:layoutDirection="rtl">
+
+        <!-- Ligne 1: date avec jour de semaine -->
+        <TextView
+            android:id="@+id/tvDateGreg"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="@dimen/text_date_greg"
+            android:textColor="@color/text_secondary"
+            android:gravity="center"
+            tools:text="الخميس 19 جوان 2026" />
+
+        <!-- Ligne 2: date hijri (mois en lettres). Clic -> affiche le Chourouk -->
+        <TextView
+            android:id="@+id/tvDateHijri"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textSize="@dimen/text_date_hijri"
+            android:textColor="@color/accent_gold"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:padding="4dp"
+            tools:text="4 محرم 1448" />
+
+        <!-- Chourouk : cache par defaut, revele par clic sur tvDateHijri -->
+        <TextView
+            android:id="@+id/tvChourouk"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="@dimen/text_chourouk"
+            android:textColor="@color/text_secondary"
+            android:gravity="center"
+            android:visibility="gone"
+            tools:text="الشروق: 06:10" />
+
+        <!-- Ligne 3: heure avec minute et seconde, agrandie au maximum, mise a jour chaque seconde -->
+        <TextView
+            android:id="@+id/tvClock"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="10dp"
+            android:textSize="@dimen/text_clock"
+            android:textColor="@color/text_primary"
+            android:fontFamily="monospace"
+            android:gravity="center"
+            tools:text="14:27:05" />
+
+        <!-- Lignes 4-8: les 5 prieres, toutes visibles simultanement -->
+        <LinearLayout
+            android:id="@+id/rowFajr"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp" />
+
+        <LinearLayout
+            android:id="@+id/rowDhohr"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp" />
+
+        <LinearLayout
+            android:id="@+id/rowAsr"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp" />
+
+        <LinearLayout
+            android:id="@+id/rowMaghreb"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp" />
+
+        <LinearLayout
+            android:id="@+id/rowIsha"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp" />
+
+    </LinearLayout>
+
+    <!-- Ligne 9: 3 boutons precedent / now / suivant -->
+    <LinearLayout
+        android:id="@+id/navRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:orientation="horizontal"
+        android:layoutDirection="rtl"
+        android:layout_marginTop="12dp">
+
+        <TextView
+            android:id="@+id/btnPrev"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/nav_button_bg"
+            android:gravity="center"
+            android:text="@string/previous"
+            android:textColor="@color/text_primary"
+            android:textSize="@dimen/text_nav_button" />
+
+        <TextView
+            android:id="@+id/btnNow"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/nav_button_bg"
+            android:gravity="center"
+            android:text="@string/now"
+            android:textColor="@color/accent_gold"
+            android:textStyle="bold"
+            android:textSize="@dimen/text_nav_button" />
+
+        <TextView
+            android:id="@+id/btnNext"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:background="@drawable/nav_button_bg"
+            android:gravity="center"
+            android:text="@string/next"
+            android:textColor="@color/text_primary"
+            android:textSize="@dimen/text_nav_button" />
+
+    </LinearLayout>
+
+</RelativeLayout>
