@@ -117,23 +117,36 @@ class SalatDataRepository private constructor(
 
         /**
          * Tente de parser un texte JSON candidat (verification de structure minimale).
-         * Leve une exception si le format est invalide -> permet a l'appelant (import UI)
-         * d'afficher un message d'erreur sans casser les donnees existantes.
+         * Leve une exception (avec message precis) si le format est invalide -> permet
+         * a l'appelant (import UI) d'afficher la vraie cause sans casser les donnees existantes.
          */
         fun validateJsonText(text: String) {
-            val root = JSONObject(text)
+            val cleaned = stripBom(text)
+            val root = try {
+                JSONObject(cleaned)
+            } catch (e: Exception) {
+                throw IllegalArgumentException("JSON invalide : ${e.message}")
+            }
             require(root.has("horaires")) { "champ 'horaires' manquant" }
             require(root.has("ref_hor")) { "champ 'ref_hor' manquant" }
             require(root.has("villes")) { "champ 'villes' manquant" }
             // Force le parsing complet pour detecter les erreurs de structure profonde
-            parseRoot(root)
+            try {
+                parseRoot(root)
+            } catch (e: Exception) {
+                throw IllegalArgumentException("structure invalide : ${e.message}")
+            }
         }
+
+        /** Retire un eventuel BOM UTF-8 (\uFEFF) en tete de fichier, frequent apres certains telechargements. */
+        private fun stripBom(text: String): String =
+            if (text.isNotEmpty() && text[0] == '\uFEFF') text.substring(1) else text
 
         private fun build(context: Context): SalatDataRepository {
             val prefs = PrefsManager(context)
             val text: String = if (prefs.useImportedData && importFile().exists()) {
                 try {
-                    importFile().readText(Charsets.UTF_8)
+                    stripBom(importFile().readText(Charsets.UTF_8))
                 } catch (e: Exception) {
                     // fichier illisible : fallback silencieux sur l'asset d'origine
                     context.assets.open(ASSET_FILE).bufferedReader(Charsets.UTF_8).use { it.readText() }

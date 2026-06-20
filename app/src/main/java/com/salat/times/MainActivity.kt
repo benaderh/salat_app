@@ -245,7 +245,12 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, getString(R.string.import_success), Toast.LENGTH_SHORT).show()
             renderDay()
         } catch (e: Exception) {
-            Toast.makeText(this, getString(R.string.import_error), Toast.LENGTH_LONG).show()
+            val detail = e.message ?: e.toString()
+            AlertDialog.Builder(this)
+                .setTitle(getString(R.string.import_error))
+                .setMessage(detail)
+                .setPositiveButton("OK", null)
+                .show()
         }
     }
 
