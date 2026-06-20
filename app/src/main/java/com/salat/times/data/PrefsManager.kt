@@ -56,6 +56,10 @@ class PrefsManager(context: Context) {
         get() = prefs.getBoolean(KEY_BATTERY_PROMPT_SHOWN, false)
         set(value) = prefs.edit().putBoolean(KEY_BATTERY_PROMPT_SHOWN, value).apply()
 
+    var storagePromptShown: Boolean
+        get() = prefs.getBoolean(KEY_STORAGE_PROMPT_SHOWN, false)
+        set(value) = prefs.edit().putBoolean(KEY_STORAGE_PROMPT_SHOWN, value).apply()
+
     /** true si l'app doit utiliser le JSON importe depuis SalatAthan/ au lieu de l'asset embarque. */
     var useImportedData: Boolean
         get() = prefs.getBoolean(KEY_USE_IMPORTED, false)
@@ -78,6 +82,7 @@ class PrefsManager(context: Context) {
     companion object {
         private const val KEY_VILLE = "ville_id"
         private const val KEY_BATTERY_PROMPT_SHOWN = "battery_prompt_shown"
+        private const val KEY_STORAGE_PROMPT_SHOWN = "storage_prompt_shown"
         private const val KEY_USE_IMPORTED = "use_imported_data"
         const val DEFAULT_VILLE_ID = 100 // Alger
     }

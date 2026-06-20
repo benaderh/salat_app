@@ -74,6 +74,11 @@
             android:exported="false"
             android:theme="@style/Theme.SalatTimes" />
 
+        <activity
+            android:name=".StoragePermissionActivity"
+            android:exported="false"
+            android:theme="@style/Theme.SalatTimes" />
+
         <!-- Recepteur des alarmes exactes (avant + a l'heure) -->
         <receiver
             android:name=".alarm.PrayerAlarmReceiver"

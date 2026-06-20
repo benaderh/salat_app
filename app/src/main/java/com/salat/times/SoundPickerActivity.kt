@@ -3,9 +3,11 @@ package com.salat.times
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.provider.Settings
 import android.widget.ArrayAdapter
 import android.widget.ListView
 import android.widget.TextView
@@ -26,12 +28,29 @@ class SoundPickerActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_sound_picker)
-
         ensureStoragePermission()
-        loadSounds()
     }
 
     private fun ensureStoragePermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // Sur Android 11+, l'acces complet aux fichiers (necessaire pour lire un .json
+            // arbitraire hors des dossiers media standards) passe par MANAGE_EXTERNAL_STORAGE,
+            // qui doit etre accordee via un ecran systeme dedie (pas une simple popup runtime).
+            if (!Environment.isExternalStorageManager()) {
+                try {
+                    val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                        data = Uri.parse("package:$packageName")
+                    }
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    try {
+                        startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+                    } catch (_: Exception) {
+                    }
+                }
+                return
+            }
+        }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
                 != PackageManager.PERMISSION_GRANTED
@@ -49,6 +68,11 @@ class SoundPickerActivity : AppCompatActivity() {
                 )
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        loadSounds()
     }
 
     override fun onRequestPermissionsResult(

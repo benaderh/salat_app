@@ -109,6 +109,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         maybeRequestBatteryExemption()
+        maybeRequestStoragePermission()
         ensureExactAlarmPermission()
         AlarmScheduler.rescheduleAll(this)
 
@@ -222,6 +223,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun confirmImportData() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !android.os.Environment.isExternalStorageManager()) {
+            startActivity(Intent(this, StoragePermissionActivity::class.java))
+            return
+        }
         val file = SalatDataRepository.importFile()
         if (!file.exists()) {
             Toast.makeText(this, getString(R.string.import_not_found), Toast.LENGTH_LONG).show()
@@ -396,6 +401,15 @@ class MainActivity : AppCompatActivity() {
     private fun maybeRequestBatteryExemption() {
         if (!prefs.batteryPromptShown) {
             startActivity(Intent(this, BatteryPermissionActivity::class.java))
+        }
+    }
+
+    private fun maybeRequestStoragePermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val granted = android.os.Environment.isExternalStorageManager()
+            if (!granted && !prefs.storagePromptShown) {
+                startActivity(Intent(this, StoragePermissionActivity::class.java))
+            }
         }
     }
 
