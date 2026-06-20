@@ -53,9 +53,6 @@
     <string name="storage_perm_title">إذن ضروري للوصول إلى الملفات</string>
     <string name="storage_perm_body">لاستيراد بيانات JSON واختيار ملفات الصوت من مجلد SalatAthan، يجب السماح للتطبيق بالوصول إلى جميع الملفات.</string>
 
-    <string name="storage_perm_title">إذن ضروري للوصول إلى الملفات</string>
-    <string name="storage_perm_body">للسماح للتطبيق بقراءة الأصوات وملف البيانات من مجلد SalatAthan، يجب منح إذن \"الوصول إلى جميع الملفات\". في الشاشة التالية، فعّل الخيار الخاص بهذا التطبيق.</string>
-
     <string name="save">حفظ</string>
     <string name="cancel">إلغاء</string>
 </resources>
