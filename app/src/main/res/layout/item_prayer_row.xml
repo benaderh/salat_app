@@ -1,18 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:layoutDirection="ltr"
-    android:gravity="center"
     android:background="?attr/selectableItemBackground"
     android:clickable="true"
     android:focusable="true"
-    android:paddingTop="2dp"
-    android:paddingBottom="2dp">
+    android:paddingTop="4dp"
+    android:paddingBottom="4dp">
 
-    <!-- Nom de la priere : cache (visibility=invisible), conserve pour usage interne -->
+    <!-- Nom de la priere : non affiche en permanence (reste cache, utilise seulement pour le Toast au clic) -->
     <TextView
         android:id="@+id/tvPrayerName"
         android:layout_width="0dp"
@@ -20,41 +17,49 @@
         android:visibility="gone"
         tools:text="الفجر" />
 
-    <!-- Ecoule -->
+    <!-- Heure de la priere : pleine largeur, enorme, centree -->
+    <TextView
+        android:id="@+id/tvPrayerTime"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="@dimen/text_prayer_time"
+        android:textStyle="bold"
+        android:textColor="@color/text_secondary"
+        android:gravity="center"
+        tools:text="04:52" />
+
+    <!-- Ecoule : ancre au bord GAUCHE (start en LTR), rouge -->
     <TextView
         android:id="@+id/tvElapsed"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_alignTop="@id/tvPrayerTime"
+        android:layout_alignBottom="@id/tvPrayerTime"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_marginLeft="6dp"
+        android:layout_marginStart="6dp"
+        android:minWidth="40dp"
+        android:gravity="center"
         android:textSize="@dimen/text_elapsed_remaining"
         android:textColor="@color/elapsed_negative_color"
-        android:fontFamily="monospace"
-        android:gravity="center"
-        android:minWidth="44dp"
         tools:text="7" />
 
-    <!-- Heure de la priere, au centre -->
-    <TextView
-        android:id="@+id/tvPrayerTime"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="10dp"
-        android:layout_marginEnd="10dp"
-        android:textSize="@dimen/text_prayer_time"
-        android:textColor="@color/text_secondary"
-        android:fontFamily="monospace"
-        android:gravity="center"
-        tools:text="04:52" />
-
-    <!-- Reste -->
+    <!-- Reste : ancre au bord DROIT (end en LTR), vert -->
     <TextView
         android:id="@+id/tvRemaining"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_alignTop="@id/tvPrayerTime"
+        android:layout_alignBottom="@id/tvPrayerTime"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginRight="6dp"
+        android:layout_marginEnd="6dp"
+        android:minWidth="40dp"
+        android:gravity="center"
         android:textSize="@dimen/text_elapsed_remaining"
         android:textColor="@color/remaining_positive_color"
-        android:fontFamily="monospace"
-        android:gravity="center"
-        android:minWidth="44dp"
         tools:text="38" />
 
-</LinearLayout>
+</RelativeLayout>

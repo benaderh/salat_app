@@ -48,8 +48,7 @@ class AthanPlaybackService : Service() {
     private fun launchAlarmScreen(label: String, isBefore: Boolean) {
         val intent = Intent(this, AlarmActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                Intent.FLAG_ACTIVITY_SINGLE_TOP
+                Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra(AlarmActivity.EXTRA_LABEL, label)
             putExtra(AlarmActivity.EXTRA_IS_BEFORE, isBefore)
         }

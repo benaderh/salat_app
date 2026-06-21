@@ -83,7 +83,6 @@
         <activity
             android:name=".AlarmActivity"
             android:exported="false"
-            android:launchMode="singleTask"
             android:excludeFromRecents="true"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.SalatTimes.Fullscreen" />
