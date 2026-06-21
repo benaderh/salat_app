@@ -11,26 +11,54 @@ import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
+import com.salat.times.AlarmActivity
 import com.salat.times.MainActivity
 import com.salat.times.R
 import com.salat.times.SalatApp
 import java.io.File
 
+/**
+ * Service foreground qui joue le son d'alarme de priere meme app fermee, et lance
+ * en parallele l'ecran plein-noir AlarmActivity (qui s'affiche meme sur ecran verrouille).
+ * Recoit ACTION_STOP (depuis AlarmActivity, au clic) pour arreter proprement le son.
+ */
 class AthanPlaybackService : Service() {
 
     private var mediaPlayer: MediaPlayer? = null
     private var wakeLock: PowerManager.WakeLock? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_STOP) {
+            stopSelfSafely()
+            return START_NOT_STICKY
+        }
+
         val label = intent?.getStringExtra(EXTRA_LABEL) ?: ""
         val soundPath = intent?.getStringExtra(EXTRA_SOUND_PATH)
         val isBefore = intent?.getBooleanExtra(EXTRA_IS_BEFORE, false) ?: false
 
         acquireWakeLock()
         startForeground(NOTIF_ID, buildNotification(label, isBefore))
+        launchAlarmScreen(label, isBefore)
         playSound(soundPath)
 
         return START_NOT_STICKY
+    }
+
+    private fun launchAlarmScreen(label: String, isBefore: Boolean) {
+        val intent = Intent(this, AlarmActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra(AlarmActivity.EXTRA_LABEL, label)
+            putExtra(AlarmActivity.EXTRA_IS_BEFORE, isBefore)
+        }
+        try {
+            startActivity(intent)
+        } catch (e: Exception) {
+            // certains OEM peuvent restreindre le lancement d'activite depuis un service
+            // en arriere-plan ; la notification haute priorite reste le filet de securite
+        }
     }
 
     private fun acquireWakeLock() {
@@ -112,6 +140,7 @@ class AthanPlaybackService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     companion object {
+        const val ACTION_STOP = "com.salat.times.ACTION_STOP_ATHAN"
         const val EXTRA_LABEL = "extra_label"
         const val EXTRA_SOUND_PATH = "extra_sound_path"
         const val EXTRA_IS_BEFORE = "extra_is_before"

@@ -86,9 +86,11 @@ class SoundPickerActivity : AppCompatActivity() {
         val listView = findViewById<ListView>(R.id.listSounds)
         val tvEmpty = findViewById<TextView>(R.id.tvEmpty)
 
+        val excluded = setOf("silent.mp3", "normal.mp3")
         val files: List<File> = if (soundDir.exists() && soundDir.isDirectory) {
-            soundDir.listFiles { f -> f.isFile && f.extension.lowercase() == "mp3" }
-                ?.sortedBy { it.name } ?: emptyList()
+            soundDir.listFiles { f ->
+                f.isFile && f.extension.lowercase() == "mp3" && f.name.lowercase() !in excluded
+            }?.sortedBy { it.name } ?: emptyList()
         } else {
             emptyList()
         }
@@ -102,7 +104,8 @@ class SoundPickerActivity : AppCompatActivity() {
         tvEmpty.visibility = android.view.View.GONE
         listView.visibility = android.view.View.VISIBLE
 
-        val names = files.map { it.name }
+        // Affiche le nom sans l'extension .mp3
+        val names = files.map { it.nameWithoutExtension }
         listView.adapter = ArrayAdapter(this, R.layout.item_ville, R.id.tvVilleName, names)
 
         listView.setOnItemClickListener { _, _, position, _ ->

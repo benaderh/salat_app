@@ -34,12 +34,11 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var tvDateGreg: TextView
     private lateinit var tvDateHijri: TextView
-    private lateinit var tvChourouk: TextView
     private lateinit var tvClock: TextView
     private lateinit var btnMenu: View
-    private lateinit var btnPrev: View
-    private lateinit var btnNow: View
-    private lateinit var btnNext: View
+    private lateinit var btnPrev: TextView
+    private lateinit var btnNow: TextView
+    private lateinit var btnNext: TextView
 
     private lateinit var rowFajr: android.widget.LinearLayout
     private lateinit var rowDhohr: android.widget.LinearLayout
@@ -49,12 +48,6 @@ class MainActivity : AppCompatActivity() {
 
     private var displayedDate: LocalDate = LocalDate.now()
     private var isToday: Boolean = true
-
-    // Pour faire redisparaitre le label de priere / le chourouk apres quelques secondes
-    private val hideHandler = Handler(Looper.getMainLooper())
-    private var hideLabelRunnable: Runnable? = null
-    private var hideChouroukRunnable: Runnable? = null
-    private val REVEAL_DURATION_MS = 3000L
 
     private val handler = Handler(Looper.getMainLooper())
     private val tickRunnable = object : Runnable {
@@ -74,7 +67,6 @@ class MainActivity : AppCompatActivity() {
 
         tvDateGreg = findViewById(R.id.tvDateGreg)
         tvDateHijri = findViewById(R.id.tvDateHijri)
-        tvChourouk = findViewById(R.id.tvChourouk)
         tvClock = findViewById(R.id.tvClock)
         btnMenu = findViewById(R.id.btnMenu)
         btnPrev = findViewById(R.id.btnPrev)
@@ -89,23 +81,20 @@ class MainActivity : AppCompatActivity() {
 
         inflatePrayerRows()
 
-        tvDateHijri.setOnClickListener { revealChourouk() }
+        tvDateHijri.setOnClickListener { showChouroukToast() }
 
         btnMenu.setOnClickListener { showMenu(it) }
         btnPrev.setOnClickListener {
             displayedDate = displayedDate.minusDays(1)
-            isToday = displayedDate == LocalDate.now()
-            renderDay()
+            updateDayState()
         }
         btnNext.setOnClickListener {
             displayedDate = displayedDate.plusDays(1)
-            isToday = displayedDate == LocalDate.now()
-            renderDay()
+            updateDayState()
         }
         btnNow.setOnClickListener {
             displayedDate = LocalDate.now()
-            isToday = true
-            renderDay()
+            updateDayState()
         }
 
         maybeRequestBatteryExemption()
@@ -113,7 +102,7 @@ class MainActivity : AppCompatActivity() {
         ensureExactAlarmPermission()
         AlarmScheduler.rescheduleAll(this)
 
-        renderDay()
+        updateDayState()
     }
 
     override fun onResume() {
@@ -127,8 +116,6 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         handler.removeCallbacks(tickRunnable)
-        hideLabelRunnable?.let { hideHandler.removeCallbacks(it) }
-        hideChouroukRunnable?.let { hideHandler.removeCallbacks(it) }
     }
 
     private fun applyImmersiveFullscreen() {
@@ -147,7 +134,8 @@ class MainActivity : AppCompatActivity() {
         val name: TextView,
         val time: TextView,
         val elapsed: TextView,
-        val remaining: TextView
+        val remaining: TextView,
+        val label: String
     )
 
     private lateinit var holderFajr: RowHolder
@@ -172,34 +160,17 @@ class MainActivity : AppCompatActivity() {
         val elapsedTv = parent.findViewById<TextView>(R.id.tvElapsed)
         val remainingTv = parent.findViewById<TextView>(R.id.tvRemaining)
         nameTv.text = label
-        val holder = RowHolder(parent, nameTv, timeTv, elapsedTv, remainingTv)
-        view.setOnClickListener { revealLabel(holder) }
+        nameTv.visibility = View.INVISIBLE
+        val holder = RowHolder(parent, nameTv, timeTv, elapsedTv, remainingTv, label)
+        view.setOnClickListener { Toast.makeText(this, label, Toast.LENGTH_SHORT).show() }
         return holder
     }
 
-    /** Affiche temporairement le nom de la priere (point 3), puis le recache. */
-    private fun revealLabel(holder: RowHolder) {
-        hideLabelRunnable?.let { hideHandler.removeCallbacks(it) }
-        // Recacher tous les autres labels d'abord
-        listOf(holderFajr, holderDhohr, holderAsr, holderMaghreb, holderIsha).forEach {
-            if (it !== holder) it.name.visibility = View.INVISIBLE
-        }
-        holder.name.visibility = View.VISIBLE
-        val r = Runnable { holder.name.visibility = View.INVISIBLE }
-        hideLabelRunnable = r
-        hideHandler.postDelayed(r, REVEAL_DURATION_MS)
-    }
-
-    /** Affiche temporairement le Chourouk (lever du soleil) (point 3), puis le recache. */
-    private fun revealChourouk() {
-        hideChouroukRunnable?.let { hideHandler.removeCallbacks(it) }
+    /** Toast affichant l'heure du Chourouk (lever du soleil), traite comme un message de nom de priere. */
+    private fun showChouroukToast() {
         val day = repo.computeDay(displayedDate, prefs.villeId)
-        val chouroukTime = day.chourouk
-        tvChourouk.text = getString(R.string.chourouk_label) + (chouroukTime ?: "--:--")
-        tvChourouk.visibility = View.VISIBLE
-        val r = Runnable { tvChourouk.visibility = View.GONE }
-        hideChouroukRunnable = r
-        hideHandler.postDelayed(r, REVEAL_DURATION_MS)
+        val text = getString(R.string.chourouk_label) + (day.chourouk ?: "--:--")
+        Toast.makeText(this, text, Toast.LENGTH_SHORT).show()
     }
 
     private fun showMenu(anchor: View) {
@@ -273,19 +244,29 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
+    /** Met a jour l'etat jour-affiche + bascule visibilite du bouton 'اليوم'/'الآن', puis redessine. */
+    private fun updateDayState() {
+        isToday = displayedDate == LocalDate.now()
+        // Point 9 : bouton du milieu masque par defaut (sur aujourd'hui), visible des qu'on
+        // navigue sur un autre jour (et devient alors un raccourci "اليوم" pour revenir).
+        btnNow.visibility = if (isToday) View.INVISIBLE else View.VISIBLE
+        renderDay()
+    }
+
     private fun renderDay() {
         val villeId = prefs.villeId
         val day = repo.computeDay(displayedDate, villeId)
         renderDateLines(day)
         renderPrayerRows(day)
-        tvChourouk.visibility = View.GONE
         updateClockAndProgress()
     }
 
     private fun renderDateLines(day: ComputedDay) {
         val weekDay = ArabicNames.weekDayName(day.gregorianDate)
-        val gregStr = "${day.gregorianDate.dayOfMonth} ${gregMonthName(day.gregorianDate.monthValue)} ${day.gregorianDate.year}"
-        // Point 6 : pas de virgule entre jour de semaine et date
+        // Point 3, ligne 1 : format dd/mm/yyyy
+        val gregStr = "%02d/%02d/%04d".format(
+            day.gregorianDate.dayOfMonth, day.gregorianDate.monthValue, day.gregorianDate.year
+        )
         tvDateGreg.text = "$weekDay $gregStr"
 
         if (day.hijriMonth != null && day.hijriDay != null && day.hijriYear != null) {
@@ -299,11 +280,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun gregMonthName(month: Int): String = arrayOf(
-        "جانفي", "فيفري", "مارس", "أفريل", "ماي", "جوان",
-        "جويلية", "أوت", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"
-    )[month - 1]
-
     private fun renderPrayerRows(day: ComputedDay) {
         setRow(holderFajr, day.fajr)
         setRow(holderDhohr, day.dhohr)
@@ -314,18 +290,17 @@ class MainActivity : AppCompatActivity() {
 
     private fun setRow(holder: RowHolder, time: String?) {
         holder.time.text = time ?: "--:--"
+        holder.time.textSize = 36f
         holder.time.setTextColor(getColor(R.color.text_secondary))
         holder.time.setTypeface(null, android.graphics.Typeface.NORMAL)
-        holder.name.setTextColor(getColor(R.color.accent_gold))
-        holder.name.visibility = View.INVISIBLE
-        holder.elapsed.visibility = View.GONE
-        holder.remaining.visibility = View.GONE
+        holder.elapsed.text = ""
+        holder.remaining.text = ""
     }
 
     /** Met a jour l'horloge en direct (hh:mm:ss) + determine prochaine priere + affiche ecoule/restant. */
     private fun updateClockAndProgress() {
         val now = LocalDateTime.now()
-        // Point 5 : horloge hh:mm:ss mise a jour chaque seconde
+        // Point 3, ligne 3 : horloge hh:mm:ss mise a jour chaque seconde
         tvClock.text = now.format(DateTimeFormatter.ofPattern("HH:mm:ss"))
 
         if (!isToday) {
@@ -352,30 +327,28 @@ class MainActivity : AppCompatActivity() {
         }
         val nextIndex = if (prevIndex + 1 < prayers.size) prevIndex + 1 else -1
 
-        // Reinitialiser les styles temps/couleurs (mais pas la visibilite du label, geree par clic)
+        // Reinitialiser les styles temps/couleurs
         prayers.forEach { (_, _, h) ->
-            h.elapsed.visibility = View.GONE
-            h.remaining.visibility = View.GONE
+            h.elapsed.text = ""
+            h.remaining.text = ""
             h.time.setTextColor(getColor(R.color.text_secondary))
             h.time.setTypeface(null, android.graphics.Typeface.NORMAL)
         }
 
-        // Priere precedente : temps ecoule depuis son heure, a gauche, rouge, format hh:mm
+        // Priere precedente : temps ecoule depuis son heure, a gauche, rouge
         if (prevIndex >= 0) {
             val (_, t, h) = prayers[prevIndex]
             val elapsed = Duration.between(t, nowTime)
-            h.elapsed.text = formatHhMm(elapsed)
-            h.elapsed.visibility = View.VISIBLE
+            applyDurationText(h.elapsed, elapsed)
         }
 
-        // Priere suivante : couleur differente + gras + temps restant a droite, vert, format hh:mm
+        // Priere suivante : couleur differente + gras + temps restant a droite, vert
         if (nextIndex >= 0) {
             val (_, t, h) = prayers[nextIndex]
             val remaining = Duration.between(nowTime, t)
             h.time.setTextColor(getColor(R.color.next_prayer_color))
             h.time.setTypeface(null, android.graphics.Typeface.BOLD)
-            h.remaining.text = formatHhMm(remaining)
-            h.remaining.visibility = View.VISIBLE
+            applyDurationText(h.remaining, remaining)
         } else if (prevIndex == prayers.size - 1) {
             // Apres Isha : la "suivante" est le Fajr du lendemain -> on le calcule pour info
             val tomorrow = repo.computeDay(displayedDate.plusDays(1), prefs.villeId)
@@ -384,18 +357,35 @@ class MainActivity : AppCompatActivity() {
                 val remaining = Duration.between(now, fajrDateTime)
                 holderFajr.time.setTextColor(getColor(R.color.next_prayer_color))
                 holderFajr.time.setTypeface(null, android.graphics.Typeface.BOLD)
-                holderFajr.remaining.text = formatHhMm(remaining)
-                holderFajr.remaining.visibility = View.VISIBLE
+                applyDurationText(holderFajr.remaining, remaining)
             }
         }
     }
 
-    /** Formate une duree en hh:mm (point 4). */
-    private fun formatHhMm(d: Duration): String {
-        val total = d.seconds.coerceAtLeast(0)
-        val h = total / 3600
-        val m = (total % 3600) / 60
-        return "%02d:%02d".format(h, m)
+    /**
+     * Point 3 : formatage adaptatif de la duree, avec taille de police agrandie quand
+     * la chaine est plus courte (donc plus de place disponible pour l'agrandir) :
+     *  - moins de 10 minutes -> un seul chiffre "m"            (le plus grand)
+     *  - moins d'1 heure (>= 10 min) -> "mm"                   (grand)
+     *  - moins de 10 heures -> "h:mm"                          (moyen)
+     *  - 10 heures ou plus -> "hh:mm"                          (normal, le plus petit des 4)
+     */
+    private fun applyDurationText(tv: TextView, d: Duration) {
+        val totalSeconds = d.seconds.coerceAtLeast(0)
+        val totalMinutes = totalSeconds / 60
+        val h = totalMinutes / 60
+        val m = totalMinutes % 60
+
+        val text: String
+        val sizeSp: Float
+        when {
+            h == 0L && m < 10 -> { text = "$m"; sizeSp = 34f }
+            h == 0L -> { text = "%02d".format(m); sizeSp = 30f }
+            h < 10 -> { text = "$h:%02d".format(m); sizeSp = 22f }
+            else -> { text = "%02d:%02d".format(h, m); sizeSp = 18f }
+        }
+        tv.text = text
+        tv.textSize = sizeSp
     }
 
     private fun maybeRequestBatteryExemption() {

@@ -4,68 +4,66 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:layoutDirection="rtl"
-    android:gravity="center_vertical|center_horizontal"
+    android:layoutDirection="ltr"
+    android:gravity="center_vertical"
     android:background="?attr/selectableItemBackground"
     android:clickable="true"
     android:focusable="true"
     android:paddingTop="2dp"
     android:paddingBottom="2dp">
 
-    <!-- Label de la priere : cache par defaut, revele au clic puis redisparait -->
+    <!-- Gauche : temps ecoule (25%) -->
     <TextView
-        android:id="@+id/tvPrayerName"
-        android:layout_width="wrap_content"
+        android:id="@+id/tvElapsed"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:textSize="@dimen/text_prayer_name"
-        android:textColor="@color/accent_gold"
+        android:layout_weight="25"
+        android:textSize="@dimen/text_elapsed_remaining"
+        android:textColor="@color/elapsed_negative_color"
+        android:fontFamily="monospace"
         android:gravity="center"
-        android:layout_marginStart="8dp"
-        android:visibility="invisible"
-        tools:text="الفجر" />
+        tools:text="7" />
 
-    <!-- Heure + (ecoule ou reste) cote a cote sur la meme ligne -->
+    <!-- Centre : nom de la priere (cache) + heure (50%) -->
     <LinearLayout
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layoutDirection="ltr"
-        android:gravity="center_vertical">
+        android:layout_weight="50"
+        android:orientation="vertical"
+        android:gravity="center">
+
+        <TextView
+            android:id="@+id/tvPrayerName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="@dimen/text_prayer_name"
+            android:textColor="@color/accent_gold"
+            android:gravity="center"
+            android:visibility="invisible"
+            tools:text="الفجر" />
 
         <TextView
             android:id="@+id/tvPrayerTime"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textSize="@dimen/text_prayer_time"
-            android:textColor="@color/text_primary"
+            android:textColor="@color/text_secondary"
             android:fontFamily="monospace"
             android:gravity="center"
             tools:text="04:52" />
 
-        <TextView
-            android:id="@+id/tvElapsed"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="14dp"
-            android:textSize="@dimen/text_elapsed_remaining"
-            android:textColor="@color/elapsed_negative_color"
-            android:fontFamily="monospace"
-            android:gravity="center"
-            android:visibility="gone"
-            tools:text="5:15" />
-
-        <TextView
-            android:id="@+id/tvRemaining"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="14dp"
-            android:textSize="@dimen/text_elapsed_remaining"
-            android:textColor="@color/remaining_positive_color"
-            android:fontFamily="monospace"
-            android:gravity="center"
-            android:visibility="gone"
-            tools:text="3:53" />
-
     </LinearLayout>
+
+    <!-- Droite : temps restant (25%) -->
+    <TextView
+        android:id="@+id/tvRemaining"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="25"
+        android:textSize="@dimen/text_elapsed_remaining"
+        android:textColor="@color/remaining_positive_color"
+        android:fontFamily="monospace"
+        android:gravity="center"
+        tools:text="38" />
 
 </LinearLayout>

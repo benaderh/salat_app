@@ -15,6 +15,7 @@
     <string name="previous">السابق</string>
     <string name="now">الآن</string>
     <string name="next">التالي</string>
+    <string name="today">اليوم</string>
 
     <string name="elapsed">مضى</string>
     <string name="remaining">يتبقى</string>
@@ -52,6 +53,9 @@
 
     <string name="storage_perm_title">إذن ضروري للوصول إلى الملفات</string>
     <string name="storage_perm_body">لاستيراد بيانات JSON واختيار ملفات الصوت من مجلد SalatAthan، يجب السماح للتطبيق بالوصول إلى جميع الملفات.</string>
+
+    <string name="alarm_subtitle_before">اقترب وقت</string>
+    <string name="alarm_subtitle_at_time">حان وقت</string>
 
     <string name="save">حفظ</string>
     <string name="cancel">إلغاء</string>

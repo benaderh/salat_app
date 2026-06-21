@@ -30,20 +30,20 @@
         android:gravity="center"
         android:layoutDirection="rtl">
 
-        <!-- Ligne 1: date avec jour de semaine -->
+        <!-- Ligne 1: date avec jour de semaine, dd/mm/yyyy, largeur pleine -->
         <TextView
             android:id="@+id/tvDateGreg"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textSize="@dimen/text_date_greg"
             android:textColor="@color/text_secondary"
             android:gravity="center"
-            tools:text="الخميس 19 جوان 2026" />
+            tools:text="السبت 20/06/2026" />
 
-        <!-- Ligne 2: date hijri (mois en lettres). Clic -> affiche le Chourouk -->
+        <!-- Ligne 2: date hijri, largeur pleine. Clic -> toast chourouk -->
         <TextView
             android:id="@+id/tvDateHijri"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
             android:textSize="@dimen/text_date_hijri"
@@ -54,81 +54,59 @@
             android:clickable="true"
             android:focusable="true"
             android:padding="4dp"
-            tools:text="4 محرم 1448" />
+            tools:text="5 محرم 1448" />
 
-        <!-- Chourouk : cache par defaut, revele par clic sur tvDateHijri -->
-        <TextView
-            android:id="@+id/tvChourouk"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="@dimen/text_chourouk"
-            android:textColor="@color/text_secondary"
-            android:gravity="center"
-            android:visibility="gone"
-            tools:text="الشروق: 06:10" />
-
-        <!-- Ligne 3: heure avec minute et seconde, agrandie au maximum, mise a jour chaque seconde -->
+        <!-- Ligne 3: horloge hh:mm:ss, largeur pleine, la plus grande -->
         <TextView
             android:id="@+id/tvClock"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="10dp"
+            android:layout_marginTop="6dp"
             android:textSize="@dimen/text_clock"
             android:textColor="@color/text_primary"
             android:fontFamily="monospace"
             android:gravity="center"
             tools:text="14:27:05" />
 
+        <!-- Petit espace vertical -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="14dp" />
+
         <!-- Lignes 4-8: les 5 prieres, toutes visibles simultanement -->
         <LinearLayout
             android:id="@+id/rowFajr"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp" />
+            android:orientation="vertical" />
 
         <LinearLayout
             android:id="@+id/rowDhohr"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp" />
+            android:orientation="vertical" />
 
         <LinearLayout
             android:id="@+id/rowAsr"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp" />
+            android:orientation="vertical" />
 
         <LinearLayout
             android:id="@+id/rowMaghreb"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp" />
+            android:orientation="vertical" />
 
         <LinearLayout
             android:id="@+id/rowIsha"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp" />
+            android:orientation="vertical" />
 
     </LinearLayout>
 
-    <!-- Ligne 9: 3 boutons precedent / now / suivant -->
+    <!-- Ligne 9: 3 boutons precedent / now (masque par defaut) / suivant -->
     <LinearLayout
         android:id="@+id/navRow"
         android:layout_width="match_parent"
@@ -159,10 +137,11 @@
             android:layout_marginEnd="6dp"
             android:background="@drawable/nav_button_bg"
             android:gravity="center"
-            android:text="@string/now"
+            android:text="@string/today"
             android:textColor="@color/accent_gold"
             android:textStyle="bold"
-            android:textSize="@dimen/text_nav_button" />
+            android:textSize="@dimen/text_nav_button"
+            android:visibility="invisible" />
 
         <TextView
             android:id="@+id/btnNext"
