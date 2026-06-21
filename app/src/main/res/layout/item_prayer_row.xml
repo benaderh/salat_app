@@ -5,65 +5,56 @@
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:layoutDirection="ltr"
-    android:gravity="center_vertical"
+    android:gravity="center"
     android:background="?attr/selectableItemBackground"
     android:clickable="true"
     android:focusable="true"
     android:paddingTop="2dp"
     android:paddingBottom="2dp">
 
-    <!-- Gauche : temps ecoule (25%) -->
+    <!-- Nom de la priere : cache (visibility=invisible), conserve pour usage interne -->
+    <TextView
+        android:id="@+id/tvPrayerName"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        tools:text="الفجر" />
+
+    <!-- Ecoule -->
     <TextView
         android:id="@+id/tvElapsed"
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_weight="25"
         android:textSize="@dimen/text_elapsed_remaining"
         android:textColor="@color/elapsed_negative_color"
         android:fontFamily="monospace"
         android:gravity="center"
+        android:minWidth="44dp"
         tools:text="7" />
 
-    <!-- Centre : nom de la priere (cache) + heure (50%) -->
-    <LinearLayout
-        android:layout_width="0dp"
+    <!-- Heure de la priere, au centre -->
+    <TextView
+        android:id="@+id/tvPrayerTime"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_weight="50"
-        android:orientation="vertical"
-        android:gravity="center">
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="10dp"
+        android:textSize="@dimen/text_prayer_time"
+        android:textColor="@color/text_secondary"
+        android:fontFamily="monospace"
+        android:gravity="center"
+        tools:text="04:52" />
 
-        <TextView
-            android:id="@+id/tvPrayerName"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="@dimen/text_prayer_name"
-            android:textColor="@color/accent_gold"
-            android:gravity="center"
-            android:visibility="invisible"
-            tools:text="الفجر" />
-
-        <TextView
-            android:id="@+id/tvPrayerTime"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="@dimen/text_prayer_time"
-            android:textColor="@color/text_secondary"
-            android:fontFamily="monospace"
-            android:gravity="center"
-            tools:text="04:52" />
-
-    </LinearLayout>
-
-    <!-- Droite : temps restant (25%) -->
+    <!-- Reste -->
     <TextView
         android:id="@+id/tvRemaining"
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_weight="25"
         android:textSize="@dimen/text_elapsed_remaining"
         android:textColor="@color/remaining_positive_color"
         android:fontFamily="monospace"
         android:gravity="center"
+        android:minWidth="44dp"
         tools:text="38" />
 
 </LinearLayout>

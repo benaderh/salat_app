@@ -56,15 +56,19 @@
             android:padding="4dp"
             tools:text="5 محرم 1448" />
 
-        <!-- Ligne 3: horloge hh:mm:ss, largeur pleine, la plus grande -->
+        <!-- Ligne 3: horloge hh:mm:ss, largeur pleine, la plus grande, auto-ajustee sur 1 ligne -->
         <TextView
             android:id="@+id/tvClock"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
-            android:textSize="@dimen/text_clock"
+            android:maxLines="1"
+            android:autoSizeTextType="uniform"
+            android:autoSizeMinTextSize="28sp"
+            android:autoSizeMaxTextSize="64sp"
+            android:autoSizeStepGranularity="1sp"
             android:textColor="@color/text_primary"
-            android:fontFamily="monospace"
+            android:fontFamily="sans-serif-medium"
             android:gravity="center"
             tools:text="14:27:05" />
 

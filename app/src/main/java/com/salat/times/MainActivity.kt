@@ -154,13 +154,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun inflateInto(parent: android.widget.LinearLayout, inflater: LayoutInflater, label: String): RowHolder {
-        val view = inflater.inflate(R.layout.item_prayer_row, parent, true)
-        val nameTv = parent.findViewById<TextView>(R.id.tvPrayerName)
-        val timeTv = parent.findViewById<TextView>(R.id.tvPrayerTime)
-        val elapsedTv = parent.findViewById<TextView>(R.id.tvElapsed)
-        val remainingTv = parent.findViewById<TextView>(R.id.tvRemaining)
+        val view = inflater.inflate(R.layout.item_prayer_row, parent, false)
+        parent.addView(view)
+        val nameTv = view.findViewById<TextView>(R.id.tvPrayerName)
+        val timeTv = view.findViewById<TextView>(R.id.tvPrayerTime)
+        val elapsedTv = view.findViewById<TextView>(R.id.tvElapsed)
+        val remainingTv = view.findViewById<TextView>(R.id.tvRemaining)
         nameTv.text = label
-        nameTv.visibility = View.INVISIBLE
         val holder = RowHolder(parent, nameTv, timeTv, elapsedTv, remainingTv, label)
         view.setOnClickListener { Toast.makeText(this, label, Toast.LENGTH_SHORT).show() }
         return holder
@@ -340,6 +340,14 @@ class MainActivity : AppCompatActivity() {
             val (_, t, h) = prayers[prevIndex]
             val elapsed = Duration.between(t, nowTime)
             applyDurationText(h.elapsed, elapsed)
+        } else {
+            // Avant le premier Fajr du jour : la priere "precedente" est l'Isha d'hier
+            val yesterday = repo.computeDay(displayedDate.minusDays(1), prefs.villeId)
+            yesterday.isha?.let { ishaStr ->
+                val ishaDateTime = LocalDateTime.of(displayedDate.minusDays(1), LocalTime.parse(ishaStr))
+                val elapsed = Duration.between(ishaDateTime, now)
+                applyDurationText(holderIsha.elapsed, elapsed)
+            }
         }
 
         // Priere suivante : couleur differente + gras + temps restant a droite, vert
@@ -350,7 +358,7 @@ class MainActivity : AppCompatActivity() {
             h.time.setTypeface(null, android.graphics.Typeface.BOLD)
             applyDurationText(h.remaining, remaining)
         } else if (prevIndex == prayers.size - 1) {
-            // Apres Isha : la "suivante" est le Fajr du lendemain -> on le calcule pour info
+            // Apres Isha (et avant minuit) : la "suivante" est le Fajr du lendemain
             val tomorrow = repo.computeDay(displayedDate.plusDays(1), prefs.villeId)
             tomorrow.fajr?.let { fajrStr ->
                 val fajrDateTime = LocalDateTime.of(displayedDate.plusDays(1), LocalTime.parse(fajrStr))

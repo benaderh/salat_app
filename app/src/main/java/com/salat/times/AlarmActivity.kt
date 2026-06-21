@@ -1,7 +1,10 @@
 package com.salat.times
 
 import android.app.KeyguardManager
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
 import android.view.View
@@ -12,10 +15,19 @@ import com.salat.times.alarm.AthanPlaybackService
 
 /**
  * Activite plein ecran noir affichee pendant qu'une alarme de priere sonne.
- * S'affiche meme sur ecran verrouille. Le clic n'importe ou arrete le son
- * (via AthanPlaybackService.stopPlayback) et ferme cet ecran.
+ * S'affiche meme sur ecran verrouille ou par-dessus une autre app au premier plan.
+ * Se ferme dans 2 cas :
+ *  - clic n'importe ou sur l'ecran -> arrete le son explicitement, puis ferme
+ *  - fin naturelle de l'audio (broadcast ACTION_PLAYBACK_STOPPED depuis le service) -> ferme seule
  */
 class AlarmActivity : AppCompatActivity() {
+
+    private val playbackStoppedReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            // L'audio s'est termine tout seul (ou a ete arrete ailleurs) : fermer cet ecran
+            if (!isFinishing) finish()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,7 +45,28 @@ class AlarmActivity : AppCompatActivity() {
         findViewById<View>(android.R.id.content).setOnClickListener { stopAndClose() }
     }
 
+    override fun onStart() {
+        super.onStart()
+        val filter = IntentFilter(AthanPlaybackService.ACTION_PLAYBACK_STOPPED)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(playbackStoppedReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            registerReceiver(playbackStoppedReceiver, filter)
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        try {
+            unregisterReceiver(playbackStoppedReceiver)
+        } catch (_: Exception) {
+        }
+    }
+
     private fun showOverLockScreen() {
+        // Garantit l'affichage par-dessus l'ecran verrouille ET par-dessus toute autre app
+        // au premier plan (utilisation normale du telephone au moment de l'alarme).
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)
             setTurnScreenOn(true)
@@ -45,6 +78,9 @@ class AlarmActivity : AppCompatActivity() {
                     or WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD
             )
         }
+        window.addFlags(
+            WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+        )
         val km = getSystemService(KEYGUARD_SERVICE) as? KeyguardManager
         km?.requestDismissKeyguard(this, null)
     }

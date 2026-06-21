@@ -124,6 +124,7 @@ class AthanPlaybackService : Service() {
         mediaPlayer = null
         wakeLock?.let { if (it.isHeld) it.release() }
         stopForeground(STOP_FOREGROUND_REMOVE)
+        sendBroadcast(Intent(ACTION_PLAYBACK_STOPPED).setPackage(packageName))
         stopSelf()
     }
 
@@ -141,6 +142,7 @@ class AthanPlaybackService : Service() {
 
     companion object {
         const val ACTION_STOP = "com.salat.times.ACTION_STOP_ATHAN"
+        const val ACTION_PLAYBACK_STOPPED = "com.salat.times.ACTION_PLAYBACK_STOPPED"
         const val EXTRA_LABEL = "extra_label"
         const val EXTRA_SOUND_PATH = "extra_sound_path"
         const val EXTRA_IS_BEFORE = "extra_is_before"
