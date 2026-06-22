@@ -290,7 +290,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun setRow(holder: RowHolder, time: String?) {
         holder.time.text = time ?: "--:--"
-        holder.time.textSize = 40f
         holder.time.setTextColor(getColor(R.color.text_secondary))
         holder.time.setTypeface(null, android.graphics.Typeface.NORMAL)
         holder.elapsed.text = ""

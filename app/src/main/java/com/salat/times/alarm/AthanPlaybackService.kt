@@ -1,7 +1,6 @@
 package com.salat.times.alarm
 
 import android.app.Notification
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
@@ -11,16 +10,24 @@ import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import com.salat.times.AlarmActivity
-import com.salat.times.MainActivity
 import com.salat.times.R
 import com.salat.times.SalatApp
 import java.io.File
 
 /**
- * Service foreground qui joue le son d'alarme de priere meme app fermee, et lance
- * en parallele l'ecran plein-noir AlarmActivity (qui s'affiche meme sur ecran verrouille).
- * Recoit ACTION_STOP (depuis AlarmActivity, au clic) pour arreter proprement le son.
+ * Service foreground qui joue le son d'alarme et affiche l'ecran noir via fullScreenIntent.
+ *
+ * Sur Android 10+ (API 29+), le lancement direct d'Activity depuis un service en arriere-plan
+ * est bloque par le systeme. La seule solution garantie est le "fullScreenIntent" attache
+ * a la notification foreground : Android affiche alors AlarmActivity immediatement, que le
+ * telephone soit :
+ *   - en veille (ecran eteint)  -> reveille l'ecran et affiche AlarmActivity par-dessus le lock
+ *   - utilise par une autre app -> affiche AlarmActivity en plein ecran par-dessus tout
+ *   - app deja ouverte          -> idem
+ *
+ * Recoit ACTION_STOP (depuis AlarmActivity au clic ou a la fin du son) pour s'arreter.
  */
 class AthanPlaybackService : Service() {
 
@@ -38,49 +45,73 @@ class AthanPlaybackService : Service() {
         val isBefore = intent?.getBooleanExtra(EXTRA_IS_BEFORE, false) ?: false
 
         acquireWakeLock()
-        startForeground(NOTIF_ID, buildNotification(label, isBefore))
-        launchAlarmScreen(label, isBefore)
-        playSound(soundPath)
 
+        val notification = buildFullScreenNotification(label, isBefore)
+        startForeground(NOTIF_ID, notification)
+
+        // Declenche explicitement le fullScreenIntent via NotificationManager
+        // (startForeground seul ne garantit pas le fullscreen sur tous les OEM)
+        try {
+            NotificationManagerCompat.from(this).notify(NOTIF_ID, notification)
+        } catch (_: SecurityException) { }
+
+        playSound(soundPath)
         return START_NOT_STICKY
     }
 
-    private fun launchAlarmScreen(label: String, isBefore: Boolean) {
-        val intent = Intent(this, AlarmActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                Intent.FLAG_ACTIVITY_CLEAR_TOP
+    /**
+     * Construit la notification foreground avec un fullScreenIntent pointant vers AlarmActivity.
+     * Le fullScreenIntent est l'API officielle Android pour "afficher un ecran par-dessus tout,
+     * meme depuis un service en arriere-plan, meme ecran verrouille".
+     */
+    private fun buildFullScreenNotification(label: String, isBefore: Boolean): Notification {
+        val title = if (isBefore) "اقترب وقت $label" else "حان وقت $label"
+
+        val alarmIntent = Intent(this, AlarmActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra(AlarmActivity.EXTRA_LABEL, label)
             putExtra(AlarmActivity.EXTRA_IS_BEFORE, isBefore)
         }
-        try {
-            startActivity(intent)
-        } catch (e: Exception) {
-            // certains OEM peuvent restreindre le lancement d'activite depuis un service
-            // en arriere-plan ; la notification haute priorite reste le filet de securite
-        }
+
+        // fullScreenIntent : Android l'utilise pour reveiller l'ecran et afficher l'Activity
+        val fullScreenPi = PendingIntent.getActivity(
+            this,
+            NOTIF_ID,
+            alarmIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        // contentIntent : si l'utilisateur tape sur la notification (au lieu d'interagir
+        // avec AlarmActivity), on ouvre quand meme AlarmActivity
+        val contentPi = PendingIntent.getActivity(
+            this,
+            NOTIF_ID + 1,
+            alarmIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        return NotificationCompat.Builder(this, SalatApp.CHANNEL_ATHAN)
+            .setContentTitle(title)
+            .setContentText("مواقيت الصلاة — اضغط لإيقاف التنبيه")
+            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setContentIntent(contentPi)
+            .setFullScreenIntent(fullScreenPi, true) // true = haute priorite, affiche meme si DND
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // visible sur l'ecran verrouille
+            .setOngoing(true) // non effacable par swipe pendant la sonnerie
+            .setAutoCancel(false)
+            .build()
     }
 
     private fun acquireWakeLock() {
         val pm = getSystemService(POWER_SERVICE) as PowerManager
         wakeLock = pm.newWakeLock(
-            PowerManager.PARTIAL_WAKE_LOCK, "SalatTimes:AthanWakeLock"
+            PowerManager.FULL_WAKE_LOCK or          // reveille l'ecran (affichage)
+            PowerManager.ACQUIRE_CAUSES_WAKEUP or   // force le reveil meme si l'ecran est eteint
+            PowerManager.ON_AFTER_RELEASE,          // garde l'ecran allume apres liberation du lock
+            "SalatTimes:AthanWakeLock"
         ).apply { acquire(5 * 60 * 1000L) } // max 5 min de securite
-    }
-
-    private fun buildNotification(label: String, isBefore: Boolean): Notification {
-        val title = if (isBefore) "اقترب وقت $label" else "حان وقت $label"
-        val pi = PendingIntent.getActivity(
-            this, 0, Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        return NotificationCompat.Builder(this, SalatApp.CHANNEL_ATHAN)
-            .setContentTitle(title)
-            .setContentText("مواقيت الصلاة")
-            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            .setContentIntent(pi)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setAutoCancel(true)
-            .build()
     }
 
     private fun playSound(soundPath: String?) {
@@ -95,7 +126,6 @@ class AthanPlaybackService : Service() {
                 if (!soundPath.isNullOrBlank() && File(soundPath).exists()) {
                     setDataSource(soundPath)
                 } else {
-                    // Pas de fichier choisi : utiliser la sonnerie d'alarme systeme par defaut
                     val defaultUri = android.media.RingtoneManager.getActualDefaultRingtoneUri(
                         this@AthanPlaybackService, android.media.RingtoneManager.TYPE_ALARM
                     )
@@ -115,25 +145,19 @@ class AthanPlaybackService : Service() {
     }
 
     private fun stopSelfSafely() {
-        try {
-            mediaPlayer?.stop()
-            mediaPlayer?.release()
-        } catch (_: Exception) {
-        }
+        try { mediaPlayer?.stop(); mediaPlayer?.release() } catch (_: Exception) { }
         mediaPlayer = null
         wakeLock?.let { if (it.isHeld) it.release() }
         stopForeground(STOP_FOREGROUND_REMOVE)
+        // Annule aussi la notification qui persistait (ongoing=true)
+        try { NotificationManagerCompat.from(this).cancel(NOTIF_ID) } catch (_: Exception) { }
         sendBroadcast(Intent(ACTION_PLAYBACK_STOPPED).setPackage(packageName))
         stopSelf()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        try {
-            mediaPlayer?.stop()
-            mediaPlayer?.release()
-        } catch (_: Exception) {
-        }
+        try { mediaPlayer?.stop(); mediaPlayer?.release() } catch (_: Exception) { }
         wakeLock?.let { if (it.isHeld) it.release() }
     }
 

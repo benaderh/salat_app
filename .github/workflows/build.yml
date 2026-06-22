@@ -22,7 +22,17 @@ jobs:
       - name: Rendre gradlew executable
         run: chmod +x gradlew
 
-      - name: Compiler l'APK (release)
+      - name: Decoder le keystore depuis les secrets GitHub
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/salat_release.jks
+          echo "Keystore decode OK ($(wc -c < app/salat_release.jks) octets)"
+
+      - name: Compiler l'APK (release) avec signature fixe
+        env:
+          KEYSTORE_PATH: salat_release.jks
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./gradlew assembleRelease --no-daemon
 
       - name: Upload de l'APK genere
