@@ -8,3 +8,5 @@
 .externalNativeBuild/
 .cxx/
 app/build/
+# Ne pas ignorer salat_release.jks : il est commite volontairement dans le repo
+# pour simplifier le build (app personnelle non commerciale, pas de risque de securite)
