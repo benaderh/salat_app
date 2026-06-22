@@ -25,7 +25,7 @@ object AlarmScheduler {
 
     private const val DAYS_AHEAD = 2
 
-    // request code scheme: prayerOrdinal*10 + type(0=before,1=attime,2=silentEnd) + dayOffset*100
+    // request code scheme: prayerOrdinal*10 + type(0=before,1=attime,2=silentStart,3=silentEnd) + dayOffset*100
     private fun requestCode(prayer: PrayerKey, type: Int, dayOffset: Int): Int =
         dayOffset * 100 + prayer.ordinal * 10 + type
 
@@ -64,26 +64,40 @@ object AlarmScheduler {
             val time = LocalTime.parse(timeStr)
             val prayerDateTime = LocalDateTime.of(day.gregorianDate, time)
 
+            // ── Alarme "avant l'adhan" ──
             if (cfg.beforeEnabled && cfg.beforeMinutes > 0) {
                 val beforeDt = prayerDateTime.minusMinutes(cfg.beforeMinutes.toLong())
                 if (beforeDt.isAfter(now)) {
                     scheduleAlarm(
                         context, beforeDt, key, dayOffset, type = TYPE_BEFORE,
-                        label = label, soundPath = cfg.beforeSoundPath, isBefore = true
+                        label = label, soundPath = cfg.beforeSoundPath,
+                        isBefore = true, volume = cfg.beforeVolume
                     )
                 }
             }
+
+            // ── Alarme "a l'heure de l'adhan" ──
             if (cfg.atTimeEnabled) {
                 if (prayerDateTime.isAfter(now)) {
                     scheduleAlarm(
                         context, prayerDateTime, key, dayOffset, type = TYPE_AT_TIME,
-                        label = label, soundPath = cfg.atTimeSoundPath, isBefore = false
+                        label = label, soundPath = cfg.atTimeSoundPath,
+                        isBefore = false, volume = cfg.atTimeVolume
                     )
                 }
             }
+
+            // ── Mode silencieux ──
+            // Le mode silencieux demarre silentDelayMinutes apres l'heure de la priere.
+            // Si l'alarme adhan est encore en train de jouer a ce moment, le receiver
+            // attendra la fin du son (via un broadcast) avant d'activer le silence.
             if (cfg.silentEnabled) {
-                if (prayerDateTime.isAfter(now)) {
-                    scheduleSilentStart(context, prayerDateTime, key, dayOffset, cfg.silentDurationMinutes)
+                val silentStartDt = prayerDateTime.plusMinutes(cfg.silentDelayMinutes.toLong())
+                if (silentStartDt.isAfter(now)) {
+                    scheduleSilentStart(
+                        context, silentStartDt, key, dayOffset,
+                        cfg.silentDurationMinutes
+                    )
                 }
             }
         }
@@ -97,7 +111,8 @@ object AlarmScheduler {
         type: Int,
         label: String,
         soundPath: String?,
-        isBefore: Boolean
+        isBefore: Boolean,
+        volume: Float
     ) {
         val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val triggerMillis = triggerAt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
@@ -108,6 +123,7 @@ object AlarmScheduler {
             putExtra(EXTRA_LABEL, label)
             putExtra(EXTRA_SOUND_PATH, soundPath)
             putExtra(EXTRA_IS_BEFORE, isBefore)
+            putExtra(EXTRA_VOLUME, volume)
         }
         val pi = PendingIntent.getBroadcast(
             context, requestCode(prayer, type, dayOffset), intent,
@@ -193,6 +209,7 @@ object AlarmScheduler {
     const val EXTRA_LABEL = "extra_label"
     const val EXTRA_SOUND_PATH = "extra_sound_path"
     const val EXTRA_IS_BEFORE = "extra_is_before"
+    const val EXTRA_VOLUME = "extra_volume"
     const val EXTRA_SILENT_DURATION_MIN = "extra_silent_duration_min"
 
     private const val TYPE_BEFORE = 0

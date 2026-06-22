@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.media.AudioAttributes
+import android.media.AudioManager
 import android.media.MediaPlayer
 import android.os.Build
 import android.os.IBinder
@@ -43,8 +44,17 @@ class AthanPlaybackService : Service() {
         val label = intent?.getStringExtra(EXTRA_LABEL) ?: ""
         val soundPath = intent?.getStringExtra(EXTRA_SOUND_PATH)
         val isBefore = intent?.getBooleanExtra(EXTRA_IS_BEFORE, false) ?: false
+        val volume = intent?.getFloatExtra(EXTRA_VOLUME, 1.0f) ?: 1.0f
 
         acquireWakeLock()
+
+        // S'assurer que le stream ALARM est au volume maximum du systeme
+        // pour que notre controle relatif via MediaPlayer.setVolume() soit effectif
+        try {
+            val am = getSystemService(AUDIO_SERVICE) as AudioManager
+            val maxVol = am.getStreamMaxVolume(AudioManager.STREAM_ALARM)
+            am.setStreamVolume(AudioManager.STREAM_ALARM, maxVol, 0)
+        } catch (_: Exception) { }
 
         val notification = buildFullScreenNotification(label, isBefore)
         startForeground(NOTIF_ID, notification)
@@ -55,7 +65,7 @@ class AthanPlaybackService : Service() {
             NotificationManagerCompat.from(this).notify(NOTIF_ID, notification)
         } catch (_: SecurityException) { }
 
-        playSound(soundPath)
+        playSound(soundPath, volume)
         return START_NOT_STICKY
     }
 
@@ -114,7 +124,7 @@ class AthanPlaybackService : Service() {
         ).apply { acquire(5 * 60 * 1000L) } // max 5 min de securite
     }
 
-    private fun playSound(soundPath: String?) {
+    private fun playSound(soundPath: String?, volume: Float) {
         try {
             mediaPlayer = MediaPlayer().apply {
                 setAudioAttributes(
@@ -134,6 +144,8 @@ class AthanPlaybackService : Service() {
                     }
                 }
                 isLooping = false
+                // Appliquer le volume relatif choisi par l'utilisateur (0.0 – 1.0)
+                setVolume(volume, volume)
                 setOnCompletionListener { stopSelfSafely() }
                 setOnErrorListener { _, _, _ -> stopSelfSafely(); true }
                 prepare()
@@ -169,6 +181,7 @@ class AthanPlaybackService : Service() {
         const val EXTRA_LABEL = "extra_label"
         const val EXTRA_SOUND_PATH = "extra_sound_path"
         const val EXTRA_IS_BEFORE = "extra_is_before"
+        const val EXTRA_VOLUME = "extra_volume"
         private const val NOTIF_ID = 7711
     }
 }

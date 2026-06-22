@@ -3,9 +3,10 @@ package com.salat.times
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
+import android.view.View
 import android.widget.Button
-import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.SeekBar
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
@@ -22,13 +23,32 @@ class SettingsAlarmesActivity : AppCompatActivity() {
 
     private data class CardHolder(
         val key: PrayerKey,
+        // Section 1 : avant l'adhan
         val switchBefore: Switch,
-        val etBeforeMinutes: EditText,
+        val sectionBeforeDetails: View,
+        val tvBeforeMinutes: TextView,
+        val btnBeforeMinus: View,
+        val btnBeforePlus: View,
         val btnBeforeSound: Button,
+        val seekBarBeforeVolume: SeekBar,
+        // Section 2 : adhan
         val switchAtTime: Switch,
+        val sectionAtTimeDetails: View,
         val btnAtTimeSound: Button,
+        val seekBarAtTimeVolume: SeekBar,
+        // Section 3 : mode silencieux
         val switchSilent: Switch,
-        val etSilentDuration: EditText,
+        val sectionSilentDetails: View,
+        val tvSilentDelay: TextView,
+        val btnSilentDelayMinus: View,
+        val btnSilentDelayPlus: View,
+        val tvSilentDuration: TextView,
+        val btnSilentDurationMinus: View,
+        val btnSilentDurationPlus: View,
+        // Donnees
+        var beforeMinutes: Int,
+        var silentDelay: Int,
+        var silentDuration: Int,
         var beforeSoundPath: String?,
         var atTimeSoundPath: String?
     )
@@ -74,44 +94,147 @@ class SettingsAlarmesActivity : AppCompatActivity() {
             val cardView = inflater.inflate(R.layout.item_prayer_alarm_card, container, false)
             container.addView(cardView)
 
-            val tvLabel = cardView.findViewById<TextView>(R.id.tvPrayerLabel)
-            val switchBefore = cardView.findViewById<Switch>(R.id.switchBefore)
-            val etBeforeMinutes = cardView.findViewById<EditText>(R.id.etBeforeMinutes)
-            val btnBeforeSound = cardView.findViewById<Button>(R.id.btnBeforeSound)
-            val switchAtTime = cardView.findViewById<Switch>(R.id.switchAtTime)
-            val btnAtTimeSound = cardView.findViewById<Button>(R.id.btnAtTimeSound)
-            val switchSilent = cardView.findViewById<Switch>(R.id.switchSilent)
-            val etSilentDuration = cardView.findViewById<EditText>(R.id.etSilentDuration)
+            val cfg = prefs.getAlarmConfig(key)
 
+            val tvLabel = cardView.findViewById<TextView>(R.id.tvPrayerLabel)
             tvLabel.text = label
 
-            val cfg = prefs.getAlarmConfig(key)
+            // Section 1 widgets
+            val switchBefore = cardView.findViewById<Switch>(R.id.switchBefore)
+            val sectionBeforeDetails = cardView.findViewById<View>(R.id.sectionBeforeDetails)
+            val tvBeforeMinutes = cardView.findViewById<TextView>(R.id.tvBeforeMinutes)
+            val btnBeforeMinus = cardView.findViewById<View>(R.id.btnBeforeMinusMinus)
+            val btnBeforePlus = cardView.findViewById<View>(R.id.btnBeforePlus)
+            val btnBeforeSound = cardView.findViewById<Button>(R.id.btnBeforeSound)
+            val seekBarBeforeVolume = cardView.findViewById<SeekBar>(R.id.seekBarBeforeVolume)
+
+            // Section 2 widgets
+            val switchAtTime = cardView.findViewById<Switch>(R.id.switchAtTime)
+            val sectionAtTimeDetails = cardView.findViewById<View>(R.id.sectionAtTimeDetails)
+            val btnAtTimeSound = cardView.findViewById<Button>(R.id.btnAtTimeSound)
+            val seekBarAtTimeVolume = cardView.findViewById<SeekBar>(R.id.seekBarAtTimeVolume)
+
+            // Section 3 widgets
+            val switchSilent = cardView.findViewById<Switch>(R.id.switchSilent)
+            val sectionSilentDetails = cardView.findViewById<View>(R.id.sectionSilentDetails)
+            val tvSilentDelay = cardView.findViewById<TextView>(R.id.tvSilentDelay)
+            val btnSilentDelayMinus = cardView.findViewById<View>(R.id.btnSilentDelayMinus)
+            val btnSilentDelayPlus = cardView.findViewById<View>(R.id.btnSilentDelayPlus)
+            val tvSilentDuration = cardView.findViewById<TextView>(R.id.tvSilentDuration)
+            val btnSilentDurationMinus = cardView.findViewById<View>(R.id.btnSilentDurationMinus)
+            val btnSilentDurationPlus = cardView.findViewById<View>(R.id.btnSilentDurationPlus)
+
+            // Valeurs initiales
+            val beforeMin = cfg.beforeMinutes.coerceIn(5, 60)
+            val silentDelay = cfg.silentDelayMinutes.coerceIn(1, 15)
+            val silentDur = cfg.silentDurationMinutes.coerceIn(16, 120)
+
             switchBefore.isChecked = cfg.beforeEnabled
-            etBeforeMinutes.setText(cfg.beforeMinutes.toString())
+            tvBeforeMinutes.text = beforeMin.toString()
+            btnBeforeSound.text = shortName(cfg.beforeSoundPath)
+            seekBarBeforeVolume.progress = (cfg.beforeVolume * 100).toInt()
+
             switchAtTime.isChecked = cfg.atTimeEnabled
+            btnAtTimeSound.text = shortName(cfg.atTimeSoundPath)
+            seekBarAtTimeVolume.progress = (cfg.atTimeVolume * 100).toInt()
+
             switchSilent.isChecked = cfg.silentEnabled
-            etSilentDuration.setText(cfg.silentDurationMinutes.toString())
+            tvSilentDelay.text = silentDelay.toString()
+            tvSilentDuration.text = silentDur.toString()
+
+            // Visibilite initiale
+            sectionBeforeDetails.visibility = if (cfg.beforeEnabled) View.VISIBLE else View.GONE
+            sectionAtTimeDetails.visibility = if (cfg.atTimeEnabled) View.VISIBLE else View.GONE
+            sectionSilentDetails.visibility = if (cfg.silentEnabled) View.VISIBLE else View.GONE
 
             val holder = CardHolder(
                 key = key,
                 switchBefore = switchBefore,
-                etBeforeMinutes = etBeforeMinutes,
+                sectionBeforeDetails = sectionBeforeDetails,
+                tvBeforeMinutes = tvBeforeMinutes,
+                btnBeforeMinus = btnBeforeMinus,
+                btnBeforePlus = btnBeforePlus,
                 btnBeforeSound = btnBeforeSound,
+                seekBarBeforeVolume = seekBarBeforeVolume,
                 switchAtTime = switchAtTime,
+                sectionAtTimeDetails = sectionAtTimeDetails,
                 btnAtTimeSound = btnAtTimeSound,
+                seekBarAtTimeVolume = seekBarAtTimeVolume,
                 switchSilent = switchSilent,
-                etSilentDuration = etSilentDuration,
+                sectionSilentDetails = sectionSilentDetails,
+                tvSilentDelay = tvSilentDelay,
+                btnSilentDelayMinus = btnSilentDelayMinus,
+                btnSilentDelayPlus = btnSilentDelayPlus,
+                tvSilentDuration = tvSilentDuration,
+                btnSilentDurationMinus = btnSilentDurationMinus,
+                btnSilentDurationPlus = btnSilentDurationPlus,
+                beforeMinutes = beforeMin,
+                silentDelay = silentDelay,
+                silentDuration = silentDur,
                 beforeSoundPath = cfg.beforeSoundPath,
                 atTimeSoundPath = cfg.atTimeSoundPath
             )
             cards.add(holder)
 
-            btnBeforeSound.text = shortName(cfg.beforeSoundPath)
-            btnAtTimeSound.text = shortName(cfg.atTimeSoundPath)
+            // ── Listeners de visibilite ──
 
+            switchBefore.setOnCheckedChangeListener { _, isChecked ->
+                sectionBeforeDetails.visibility = if (isChecked) View.VISIBLE else View.GONE
+            }
+            switchAtTime.setOnCheckedChangeListener { _, isChecked ->
+                sectionAtTimeDetails.visibility = if (isChecked) View.VISIBLE else View.GONE
+            }
             switchSilent.setOnCheckedChangeListener { _, isChecked ->
+                sectionSilentDetails.visibility = if (isChecked) View.VISIBLE else View.GONE
                 if (isChecked) ensureDndAccess()
             }
+
+            // ── Boutons +/- pour المدة (avant l'adhan, 5–60) ──
+
+            btnBeforeMinus.setOnClickListener {
+                if (holder.beforeMinutes > 5) {
+                    holder.beforeMinutes--
+                    tvBeforeMinutes.text = holder.beforeMinutes.toString()
+                }
+            }
+            btnBeforePlus.setOnClickListener {
+                if (holder.beforeMinutes < 60) {
+                    holder.beforeMinutes++
+                    tvBeforeMinutes.text = holder.beforeMinutes.toString()
+                }
+            }
+
+            // ── Boutons +/- pour بدأ بعد الأذان بـ (1–15) ──
+
+            btnSilentDelayMinus.setOnClickListener {
+                if (holder.silentDelay > 1) {
+                    holder.silentDelay--
+                    tvSilentDelay.text = holder.silentDelay.toString()
+                }
+            }
+            btnSilentDelayPlus.setOnClickListener {
+                if (holder.silentDelay < 15) {
+                    holder.silentDelay++
+                    tvSilentDelay.text = holder.silentDelay.toString()
+                }
+            }
+
+            // ── Boutons +/- pour مدة الوضع الصامت (16–120) ──
+
+            btnSilentDurationMinus.setOnClickListener {
+                if (holder.silentDuration > 16) {
+                    holder.silentDuration--
+                    tvSilentDuration.text = holder.silentDuration.toString()
+                }
+            }
+            btnSilentDurationPlus.setOnClickListener {
+                if (holder.silentDuration < 120) {
+                    holder.silentDuration++
+                    tvSilentDuration.text = holder.silentDuration.toString()
+                }
+            }
+
+            // ── Selection audio ──
 
             btnBeforeSound.setOnClickListener {
                 pendingSoundTargetIsBefore = true
@@ -155,16 +278,17 @@ class SettingsAlarmesActivity : AppCompatActivity() {
 
     private fun saveAll() {
         for (card in cards) {
-            val beforeMinutes = card.etBeforeMinutes.text.toString().toIntOrNull() ?: 10
-            val silentDuration = card.etSilentDuration.text.toString().toIntOrNull() ?: 15
             val config = PrayerAlarmConfig(
                 beforeEnabled = card.switchBefore.isChecked,
-                beforeMinutes = beforeMinutes.coerceIn(1, 180),
+                beforeMinutes = card.beforeMinutes.coerceIn(5, 60),
                 beforeSoundPath = card.beforeSoundPath,
+                beforeVolume = card.seekBarBeforeVolume.progress / 100f,
                 atTimeEnabled = card.switchAtTime.isChecked,
                 atTimeSoundPath = card.atTimeSoundPath,
+                atTimeVolume = card.seekBarAtTimeVolume.progress / 100f,
                 silentEnabled = card.switchSilent.isChecked,
-                silentDurationMinutes = silentDuration.coerceIn(1, 180)
+                silentDelayMinutes = card.silentDelay.coerceIn(1, 15),
+                silentDurationMinutes = card.silentDuration.coerceIn(16, 120)
             )
             prefs.setAlarmConfig(card.key, config)
         }

@@ -59,4 +59,14 @@
 
     <string name="save">حفظ</string>
     <string name="cancel">إلغاء</string>
+
+    <!-- Nouveaux labels pour les reglages d'alarmes v2 -->
+    <string name="alarm_before_adhan">تنبيه قبل الأذان</string>
+    <string name="alarm_adhan">تنبيه الأذان</string>
+    <string name="duration_label">المدة:</string>
+    <string name="sound_label">الصوت:</string>
+    <string name="volume_label">الصوت</string>
+    <string name="silent_delay_label">بدأ بعد الأذان بـ:</string>
+    <string name="silent_duration_label">مدة الوضع الصامت:</string>
+    <string name="minutes_unit">د</string>
 </resources>

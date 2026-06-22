@@ -6,26 +6,32 @@ import org.json.JSONObject
 
 /**
  * Reglages d'alarme pour UNE priere.
- * - beforeEnabled / beforeMinutes / beforeSoundPath : alarme "avant l'heure"
- * - atTimeEnabled / atTimeSoundPath : alarme "a l'heure"
- * - silentEnabled / silentDurationMinutes : mode silencieux automatique pendant X minutes
+ * - beforeEnabled / beforeMinutes / beforeSoundPath / beforeVolume : alarme "avant l'adhan"
+ * - atTimeEnabled / atTimeSoundPath / atTimeVolume : alarme "a l'heure de l'adhan"
+ * - silentEnabled / silentDelayMinutes / silentDurationMinutes : mode silencieux automatique
  */
 data class PrayerAlarmConfig(
     val beforeEnabled: Boolean = false,
     val beforeMinutes: Int = 10,
     val beforeSoundPath: String? = null,
+    val beforeVolume: Float = 0.8f,
     val atTimeEnabled: Boolean = true,
     val atTimeSoundPath: String? = null,
+    val atTimeVolume: Float = 1.0f,
     val silentEnabled: Boolean = false,
-    val silentDurationMinutes: Int = 15
+    val silentDelayMinutes: Int = 5,
+    val silentDurationMinutes: Int = 30
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("beforeEnabled", beforeEnabled)
         put("beforeMinutes", beforeMinutes)
         put("beforeSoundPath", beforeSoundPath ?: JSONObject.NULL)
+        put("beforeVolume", beforeVolume.toDouble())
         put("atTimeEnabled", atTimeEnabled)
         put("atTimeSoundPath", atTimeSoundPath ?: JSONObject.NULL)
+        put("atTimeVolume", atTimeVolume.toDouble())
         put("silentEnabled", silentEnabled)
+        put("silentDelayMinutes", silentDelayMinutes)
         put("silentDurationMinutes", silentDurationMinutes)
     }
 
@@ -36,10 +42,13 @@ data class PrayerAlarmConfig(
                 beforeEnabled = o.optBoolean("beforeEnabled", false),
                 beforeMinutes = o.optInt("beforeMinutes", 10),
                 beforeSoundPath = if (o.isNull("beforeSoundPath")) null else o.optString("beforeSoundPath"),
+                beforeVolume = o.optDouble("beforeVolume", 0.8).toFloat(),
                 atTimeEnabled = o.optBoolean("atTimeEnabled", true),
                 atTimeSoundPath = if (o.isNull("atTimeSoundPath")) null else o.optString("atTimeSoundPath"),
+                atTimeVolume = o.optDouble("atTimeVolume", 1.0).toFloat(),
                 silentEnabled = o.optBoolean("silentEnabled", false),
-                silentDurationMinutes = o.optInt("silentDurationMinutes", 15)
+                silentDelayMinutes = o.optInt("silentDelayMinutes", 5),
+                silentDurationMinutes = o.optInt("silentDurationMinutes", 30)
             )
         }
     }
