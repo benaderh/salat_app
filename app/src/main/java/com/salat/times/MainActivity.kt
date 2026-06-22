@@ -267,7 +267,7 @@ class MainActivity : AppCompatActivity() {
         val gregStr = "%02d/%02d/%04d".format(
             day.gregorianDate.dayOfMonth, day.gregorianDate.monthValue, day.gregorianDate.year
         )
-        tvDateGreg.text = "$weekDay $gregStr"
+        tvDateGreg.text = "$weekDay \u200E$gregStr\u200E"
 
         if (day.hijriMonth != null && day.hijriDay != null && day.hijriYear != null) {
             val hijriStr = "${day.hijriDay} " + ArabicNames.hijriMonthName(day.hijriMonth) + " ${day.hijriYear}"

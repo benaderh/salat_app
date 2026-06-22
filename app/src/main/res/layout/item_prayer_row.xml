@@ -1,11 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
     android:background="?attr/selectableItemBackground"
     android:clickable="true"
     android:focusable="true"
+    android:gravity="center"
+    android:layoutDirection="ltr"
+    android:orientation="horizontal"
     android:paddingTop="4dp"
     android:paddingBottom="4dp">
 
@@ -17,11 +20,30 @@
         android:visibility="gone"
         tools:text="الفجر" />
 
-    <!-- Heure de la priere : pleine largeur, auto-ajustee a l'espace reellement alloue -->
+    <!-- Ecoule : 25% a gauche, rouge -->
+    <TextView
+        android:id="@+id/tvElapsed"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:maxLines="1"
+        android:includeFontPadding="false"
+        android:gravity="center"
+        android:textDirection="ltr"
+        android:autoSizeTextType="uniform"
+        android:autoSizeMinTextSize="12sp"
+        android:autoSizeMaxTextSize="34sp"
+        android:autoSizeStepGranularity="1sp"
+        android:textSize="@dimen/text_elapsed_remaining"
+        android:textColor="@color/elapsed_negative_color"
+        tools:text="7" />
+
+    <!-- Heure de la priere : 50% au centre, auto-ajustee a l'espace alloue -->
     <TextView
         android:id="@+id/tvPrayerTime"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="2"
         android:maxLines="1"
         android:includeFontPadding="false"
         android:autoSizeTextType="uniform"
@@ -31,40 +53,25 @@
         android:textStyle="bold"
         android:textColor="@color/text_secondary"
         android:gravity="center"
+        android:textDirection="ltr"
         tools:text="04:52" />
 
-    <!-- Ecoule : ancre au bord GAUCHE (start en LTR), rouge -->
-    <TextView
-        android:id="@+id/tvElapsed"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignTop="@id/tvPrayerTime"
-        android:layout_alignBottom="@id/tvPrayerTime"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
-        android:layout_marginLeft="6dp"
-        android:layout_marginStart="6dp"
-        android:minWidth="40dp"
-        android:gravity="center"
-        android:textSize="@dimen/text_elapsed_remaining"
-        android:textColor="@color/elapsed_negative_color"
-        tools:text="7" />
-
-    <!-- Reste : ancre au bord DROIT (end en LTR), vert -->
+    <!-- Reste : 25% a droite, vert -->
     <TextView
         android:id="@+id/tvRemaining"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignTop="@id/tvPrayerTime"
-        android:layout_alignBottom="@id/tvPrayerTime"
-        android:layout_alignParentRight="true"
-        android:layout_alignParentEnd="true"
-        android:layout_marginRight="6dp"
-        android:layout_marginEnd="6dp"
-        android:minWidth="40dp"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:maxLines="1"
+        android:includeFontPadding="false"
         android:gravity="center"
+        android:textDirection="ltr"
+        android:autoSizeTextType="uniform"
+        android:autoSizeMinTextSize="12sp"
+        android:autoSizeMaxTextSize="34sp"
+        android:autoSizeStepGranularity="1sp"
         android:textSize="@dimen/text_elapsed_remaining"
         android:textColor="@color/remaining_positive_color"
         tools:text="38" />
 
-</RelativeLayout>
+</LinearLayout>
