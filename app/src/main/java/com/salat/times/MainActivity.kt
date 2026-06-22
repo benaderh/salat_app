@@ -291,7 +291,7 @@ class MainActivity : AppCompatActivity() {
     private fun setRow(holder: RowHolder, time: String?) {
         holder.time.text = time ?: "--:--"
         holder.time.setTextColor(getColor(R.color.text_secondary))
-        holder.time.setTypeface(null, android.graphics.Typeface.NORMAL)
+        holder.time.setTypeface(null, android.graphics.Typeface.BOLD)
         holder.elapsed.text = ""
         holder.remaining.text = ""
     }
@@ -331,7 +331,7 @@ class MainActivity : AppCompatActivity() {
             h.elapsed.text = ""
             h.remaining.text = ""
             h.time.setTextColor(getColor(R.color.text_secondary))
-            h.time.setTypeface(null, android.graphics.Typeface.NORMAL)
+            h.time.setTypeface(null, android.graphics.Typeface.BOLD)
         }
 
         // Priere precedente : temps ecoule depuis son heure, a gauche, rouge
