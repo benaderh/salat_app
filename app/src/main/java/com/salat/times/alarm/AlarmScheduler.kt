@@ -130,7 +130,7 @@ object AlarmScheduler {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        setExact(am, triggerMillis, pi)
+        setAlarmClockExact(context, am, triggerMillis, pi)
     }
 
     private fun scheduleSilentStart(
@@ -152,7 +152,7 @@ object AlarmScheduler {
             context, requestCode(prayer, TYPE_SILENT_START, dayOffset), startIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        setExact(am, triggerMillis, piStart)
+        setExactBestEffort(am, triggerMillis, piStart)
 
         // Programme aussi la fin du silence
         val endMillis = triggerMillis + durationMinutes * 60_000L
@@ -163,16 +163,43 @@ object AlarmScheduler {
             context, requestCode(prayer, TYPE_SILENT_END, dayOffset), endIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        setExact(am, endMillis, piEnd)
+        setExactBestEffort(am, endMillis, piEnd)
     }
 
-    private fun setExact(am: AlarmManager, triggerMillis: Long, pi: PendingIntent) {
+    /**
+     * Programme une alarme de priere avec setAlarmClock() — la methode la plus fiable d'Android.
+     * Contrairement a setExactAndAllowWhileIdle() qui peut etre retardee de ~10 minutes en Doze,
+     * setAlarmClock() est traitee comme un reveil systeme et n'est JAMAIS retardee, quel que soit
+     * l'etat du telephone (Doze, economie de batterie, optimisations OEM).
+     *
+     * Elle affiche aussi une icone d'alarme dans la barre d'etat, ce qui est logique pour une
+     * app de prieres.
+     */
+    private fun setAlarmClockExact(context: Context, am: AlarmManager, triggerMillis: Long, pi: PendingIntent) {
+        try {
+            // PendingIntent pour l'icone d'alarme dans la barre d'etat (ouvre MainActivity au clic)
+            val showIntent = PendingIntent.getActivity(
+                context, 0,
+                Intent(context, com.salat.times.MainActivity::class.java),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            am.setAlarmClock(AlarmManager.AlarmClockInfo(triggerMillis, showIntent), pi)
+        } catch (e: SecurityException) {
+            // Fallback si erreur de permission
+            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerMillis, pi)
+        }
+    }
+
+    /**
+     * Programme une alarme non-critique (mode silencieux) avec setExactAndAllowWhileIdle().
+     * Moins critique que les alarmes de priere, un retard de quelques minutes est acceptable.
+     */
+    private fun setExactBestEffort(am: AlarmManager, triggerMillis: Long, pi: PendingIntent) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 if (am.canScheduleExactAlarms()) {
                     am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerMillis, pi)
                 } else {
-                    // Permission non accordee : fallback non-exact (l'UI doit demander la permission)
                     am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerMillis, pi)
                 }
             } else {
