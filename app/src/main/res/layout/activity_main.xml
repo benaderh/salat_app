@@ -47,9 +47,10 @@
             android:autoSizeStepGranularity="1sp"
             android:textSize="@dimen/text_date_greg"
             android:textColor="@color/text_secondary"
+            android:textStyle="bold"
             android:gravity="center"
-            android:textDirection="ltr"
-            tools:text="السبت 20/06/2026" />
+            android:textDirection="rtl"
+            tools:text="السبت 2026/06/20" />
 
         <!-- Ligne 2: date hijri. Clic -> toast chourouk -->
         <TextView
