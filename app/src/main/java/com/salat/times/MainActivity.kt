@@ -338,14 +338,14 @@ class MainActivity : AppCompatActivity() {
         if (prevIndex >= 0) {
             val (_, t, h) = prayers[prevIndex]
             val elapsed = Duration.between(t, nowTime)
-            applyDurationText(h.elapsed, elapsed)
+            applyElapsedText(h.elapsed, elapsed)
         } else {
             // Avant le premier Fajr du jour : la priere "precedente" est l'Isha d'hier
             val yesterday = repo.computeDay(displayedDate.minusDays(1), prefs.villeId)
             yesterday.isha?.let { ishaStr ->
                 val ishaDateTime = LocalDateTime.of(displayedDate.minusDays(1), LocalTime.parse(ishaStr))
                 val elapsed = Duration.between(ishaDateTime, now)
-                applyDurationText(holderIsha.elapsed, elapsed)
+                applyElapsedText(holderIsha.elapsed, elapsed)
             }
         }
 
@@ -355,7 +355,7 @@ class MainActivity : AppCompatActivity() {
             val remaining = Duration.between(nowTime, t)
             h.time.setTextColor(getColor(R.color.next_prayer_color))
             h.time.setTypeface(null, android.graphics.Typeface.BOLD)
-            applyDurationText(h.remaining, remaining)
+            applyRemainingText(h.remaining, remaining)
         } else if (prevIndex == prayers.size - 1) {
             // Apres Isha (et avant minuit) : la "suivante" est le Fajr du lendemain
             val tomorrow = repo.computeDay(displayedDate.plusDays(1), prefs.villeId)
@@ -364,22 +364,46 @@ class MainActivity : AppCompatActivity() {
                 val remaining = Duration.between(now, fajrDateTime)
                 holderFajr.time.setTextColor(getColor(R.color.next_prayer_color))
                 holderFajr.time.setTypeface(null, android.graphics.Typeface.BOLD)
-                applyDurationText(holderFajr.remaining, remaining)
+                applyRemainingText(holderFajr.remaining, remaining)
             }
         }
     }
 
     /**
-     * Point 3 : formatage adaptatif de la duree, avec taille de police agrandie quand
+     * Formatage du temps ECOULE (a gauche, rouge).
+     * Utilise la troncature (floor) : affiche le nombre de minutes COMPLETES ecoulees.
+     * Ex: 38min50s -> affiche "38"
+     */
+    private fun applyElapsedText(tv: TextView, d: Duration) {
+        val totalSeconds = d.seconds.coerceAtLeast(0)
+        val totalMinutes = totalSeconds / 60
+        applyFormattedDuration(tv, totalMinutes)
+    }
+
+    /**
+     * Formatage du temps RESTANT (a droite, vert).
+     * Utilise l'arrondi vers le haut (ceiling) : tant qu'il reste des secondes,
+     * on affiche la minute entamee.
+     * Ex: 21min10s -> affiche "22", 21min00s -> affiche "21"
+     *
+     * Cela garantit que ecoule + restant = ecart reel entre les deux prieres.
+     */
+    private fun applyRemainingText(tv: TextView, d: Duration) {
+        val totalSeconds = d.seconds.coerceAtLeast(0)
+        // Ceiling : si il reste des secondes au-dela des minutes completes, ajouter 1
+        val totalMinutes = if (totalSeconds % 60 > 0) totalSeconds / 60 + 1 else totalSeconds / 60
+        applyFormattedDuration(tv, totalMinutes)
+    }
+
+    /**
+     * Formatage adaptatif de la duree en minutes, avec taille de police agrandie quand
      * la chaine est plus courte (donc plus de place disponible pour l'agrandir) :
      *  - moins de 10 minutes -> un seul chiffre "m"            (le plus grand)
      *  - moins d'1 heure (>= 10 min) -> "mm"                   (grand)
      *  - moins de 10 heures -> "h:mm"                          (moyen)
      *  - 10 heures ou plus -> "hh:mm"                          (normal, le plus petit des 4)
      */
-    private fun applyDurationText(tv: TextView, d: Duration) {
-        val totalSeconds = d.seconds.coerceAtLeast(0)
-        val totalMinutes = totalSeconds / 60
+    private fun applyFormattedDuration(tv: TextView, totalMinutes: Long) {
         val h = totalMinutes / 60
         val m = totalMinutes % 60
 

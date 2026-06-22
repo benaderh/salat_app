@@ -270,7 +270,7 @@ class SettingsAlarmesActivity : AppCompatActivity() {
     private fun shortName(path: String?): String {
         if (path.isNullOrBlank()) return getString(R.string.select_mp3)
         return try {
-            File(path).name
+            File(path).nameWithoutExtension
         } catch (e: Exception) {
             getString(R.string.select_mp3)
         }

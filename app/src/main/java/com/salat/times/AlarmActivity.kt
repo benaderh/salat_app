@@ -1,5 +1,6 @@
 package com.salat.times
 
+import android.app.KeyguardManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -19,12 +20,16 @@ import com.salat.times.alarm.AthanPlaybackService
  *  - clic n'importe ou sur l'ecran -> arrete le son explicitement, puis ferme
  *  - fin naturelle de l'audio (broadcast ACTION_PLAYBACK_STOPPED depuis le service) -> ferme seule
  *
- * IMPORTANT : cette activite reste volontairement minimaliste. Les anciennes versions
- * combinaient FLAG_DISMISS_KEYGUARD + requestDismissKeyguard() + immersive sticky, ce qui
- * sur certains appareils (notamment au reveil depuis l'ecran verrouille) pouvait rendre
- * la zone tactile insensible jusqu'au redemarrage. On utilise ici uniquement
- * setShowWhenLocked/setTurnScreenOn (l'API recommandee depuis Android 8.1) et on evite
- * tout mode immersif "sticky" qui necessite un swipe avant d'accepter un tap.
+ * Strategie d'affichage sur ecran verrouille :
+ *  1) setShowWhenLocked(true)     -> affiche l'activity PAR-DESSUS le lock screen
+ *  2) setTurnScreenOn(true)       -> allume l'ecran si eteint
+ *  3) requestDismissKeyguard()    -> demande au systeme de DEVERROUILLER le telephone
+ *     pour que l'activity reste visible apres le deverrouillage (au lieu de disparaitre)
+ *  4) FLAG_KEEP_SCREEN_ON         -> garde l'ecran allume tant que l'activity est visible
+ *  5) FLAG_DISMISS_KEYGUARD       -> fallback pour API < 26
+ *
+ * Note : on N'utilise PAS le mode immersif sticky (SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
+ * qui sur certains appareils bloque le tactile apres un reveil d'ecran verrouille.
  */
 class AlarmActivity : AppCompatActivity() {
 
@@ -56,6 +61,11 @@ class AlarmActivity : AppCompatActivity() {
         root.setOnClickListener { stopAndClose() }
         root.isClickable = true
         root.isFocusable = true
+
+        // Demander au systeme de deverrouiller le telephone pour que l'activity reste
+        // visible apres le deverrouillage. Sans cela, l'activity s'affiche par-dessus
+        // le lock screen mais disparait quand l'utilisateur swipe pour deverrouiller.
+        dismissKeyguard()
     }
 
     override fun onStart() {
@@ -94,9 +104,34 @@ class AlarmActivity : AppCompatActivity() {
             window.addFlags(
                 WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
                     or WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+                    or WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD
             )
         }
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    }
+
+    /**
+     * Demande au systeme de deverrouiller le telephone.
+     * Sur API 26+ : utilise KeyguardManager.requestDismissKeyguard() qui affiche
+     * le prompt de deverrouillage (PIN/pattern/fingerprint) si necessaire, puis
+     * garde l'activity visible une fois deverrouille.
+     * Sur API < 26 : FLAG_DISMISS_KEYGUARD (ajoute dans showOverLockScreen) suffit.
+     */
+    private fun dismissKeyguard() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val km = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+            km.requestDismissKeyguard(this, object : KeyguardManager.KeyguardDismissCallback() {
+                override fun onDismissSucceeded() {
+                    // Keyguard deverrouille avec succes, l'activity reste visible
+                }
+                override fun onDismissError() {
+                    // Erreur de deverrouillage, ignorer
+                }
+                override fun onDismissCancelled() {
+                    // L'utilisateur a annule le deverrouillage, ignorer
+                }
+            })
+        }
     }
 
     private fun stopAndClose() {
