@@ -263,11 +263,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun renderDateLines(day: ComputedDay) {
         val weekDay = ArabicNames.weekDayName(day.gregorianDate)
-        // Point 3, ligne 1 : format dd/mm/yyyy
-        val gregStr = "%02d/%02d/%04d".format(
-            day.gregorianDate.dayOfMonth, day.gregorianDate.monthValue, day.gregorianDate.year
+        // Point 3, ligne 1 : format yyyy/mm/dd
+        val gregStr = "%04d/%02d/%02d".format(
+            day.gregorianDate.year, day.gregorianDate.monthValue, day.gregorianDate.dayOfMonth
         )
-        tvDateGreg.text = "$weekDay \u200E$gregStr\u200E"
+        tvDateGreg.text = "$weekDay \u2066$gregStr\u2069"
 
         if (day.hijriMonth != null && day.hijriDay != null && day.hijriYear != null) {
             val hijriStr = "${day.hijriDay} " + ArabicNames.hijriMonthName(day.hijriMonth) + " ${day.hijriYear}"

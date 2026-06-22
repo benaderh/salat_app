@@ -48,6 +48,7 @@
             android:textSize="@dimen/text_date_greg"
             android:textColor="@color/text_secondary"
             android:gravity="center"
+            android:textDirection="ltr"
             tools:text="السبت 20/06/2026" />
 
         <!-- Ligne 2: date hijri. Clic -> toast chourouk -->
@@ -56,6 +57,12 @@
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="10"
+            android:maxLines="1"
+            android:includeFontPadding="false"
+            android:autoSizeTextType="uniform"
+            android:autoSizeMinTextSize="14sp"
+            android:autoSizeMaxTextSize="@dimen/text_date_hijri"
+            android:autoSizeStepGranularity="1sp"
             android:textSize="@dimen/text_date_hijri"
             android:textColor="@color/accent_gold"
             android:textStyle="bold"
