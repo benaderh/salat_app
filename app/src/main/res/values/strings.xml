@@ -69,4 +69,15 @@
     <string name="silent_delay_label">بدأ بعد الأذان بـ:</string>
     <string name="silent_duration_label">مدة الوضع الصامت:</string>
     <string name="minutes_unit">د</string>
+
+    <!-- Alarm stop UI -->
+    <string name="stop_alarm">إيقاف</string>
+    <string name="notif_tap_to_stop">اضغط لإيقاف التنبيه</string>
+    <string name="alarm_tap_anywhere_hint">أو اضغط في أي مكان على الشاشة</string>
+
+    <!-- Full screen intent permission (Android 14+) -->
+    <string name="fullscreen_perm_title">إذن عرض التنبيه على الشاشة</string>
+    <string name="fullscreen_perm_body">لعرض شاشة الإيقاف عند الأذان، يجب السماح للتطبيق بعرض الإشعارات بملء الشاشة.</string>
+    <string name="fullscreen_perm_grant">السماح الآن</string>
+    <string name="fullscreen_perm_skip">لاحقًا</string>
 </resources>

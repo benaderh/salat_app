@@ -1,6 +1,7 @@
 package com.salat.times.alarm
 
 import android.app.Notification
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
@@ -65,6 +66,10 @@ class AthanPlaybackService : Service() {
             NotificationManagerCompat.from(this).notify(NOTIF_ID, notification)
         } catch (_: SecurityException) { }
 
+        // Fallback : lancer AlarmActivity directement si le fullScreenIntent
+        // risque de ne pas fonctionner (Android 14+ sans permission, ou OEM restrictif)
+        launchAlarmActivityDirect(label, isBefore)
+
         playSound(soundPath, volume)
         return START_NOT_STICKY
     }
@@ -100,18 +105,59 @@ class AthanPlaybackService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        // Action "Stop" : permet d'arreter l'alarme directement depuis la notification
+        // meme si AlarmActivity ne s'affiche pas (fallback critique)
+        val stopIntent = Intent(this, AthanPlaybackService::class.java).apply {
+            action = ACTION_STOP
+        }
+        val stopPi = PendingIntent.getService(
+            this,
+            NOTIF_ID + 2,
+            stopIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         return NotificationCompat.Builder(this, SalatApp.CHANNEL_ATHAN)
             .setContentTitle(title)
-            .setContentText("مواقيت الصلاة — اضغط لإيقاف التنبيه")
+            .setContentText(getString(R.string.notif_tap_to_stop))
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentIntent(contentPi)
             .setFullScreenIntent(fullScreenPi, true) // true = haute priorite, affiche meme si DND
+            .addAction(
+                android.R.drawable.ic_delete,
+                getString(R.string.stop_alarm),
+                stopPi
+            )
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // visible sur l'ecran verrouille
             .setOngoing(true) // non effacable par swipe pendant la sonnerie
             .setAutoCancel(false)
             .build()
+    }
+
+    /**
+     * Fallback : lance AlarmActivity directement depuis le service.
+     * Sur Android 10-13, le fullScreenIntent devrait suffire, mais certains OEM le bloquent.
+     * Sur Android 14+, USE_FULL_SCREEN_INTENT peut ne pas etre accorde.
+     * Dans tous les cas, tenter un lancement direct ne fait pas de mal :
+     * si l'Activity est deja visible (via fullScreenIntent), FLAG_CLEAR_TOP
+     * la reutilisera sans la dupliquer.
+     */
+    private fun launchAlarmActivityDirect(label: String, isBefore: Boolean) {
+        try {
+            val directIntent = Intent(this, AlarmActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_NO_USER_ACTION
+                putExtra(AlarmActivity.EXTRA_LABEL, label)
+                putExtra(AlarmActivity.EXTRA_IS_BEFORE, isBefore)
+            }
+            startActivity(directIntent)
+        } catch (_: Exception) {
+            // Sur Android 10+ en arriere-plan, le systeme peut bloquer startActivity.
+            // Ce n'est pas grave : le fullScreenIntent de la notification prendra le relais.
+        }
     }
 
     private fun acquireWakeLock() {

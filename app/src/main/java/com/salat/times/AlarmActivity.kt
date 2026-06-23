@@ -62,6 +62,9 @@ class AlarmActivity : AppCompatActivity() {
         root.isClickable = true
         root.isFocusable = true
 
+        // Bouton Stop dedié, bien visible au centre de l'ecran
+        findViewById<View>(R.id.btnStopAlarm).setOnClickListener { stopAndClose() }
+
         // Demander au systeme de deverrouiller le telephone pour que l'activity reste
         // visible apres le deverrouillage. Sans cela, l'activity s'affiche par-dessus
         // le lock screen mais disparait quand l'utilisateur swipe pour deverrouiller.

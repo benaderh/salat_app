@@ -15,29 +15,51 @@
         android:id="@+id/tvAlarmSubtitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="20sp"
+        android:textSize="22sp"
         android:textColor="#9AA5B5"
         android:gravity="center"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="12dp"
         tools:text="حان وقت" />
 
     <TextView
         android:id="@+id/tvAlarmPrayerName"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="56sp"
+        android:textSize="60sp"
         android:textColor="#D4AF37"
         android:textStyle="bold"
         android:gravity="center"
+        android:layout_marginBottom="48dp"
         tools:text="الفجر" />
+
+    <!-- Bouton Stop bien visible, cercle dore -->
+    <FrameLayout
+        android:id="@+id/btnStopAlarm"
+        android:layout_width="140dp"
+        android:layout_height="140dp"
+        android:layout_gravity="center"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="@drawable/bg_stop_alarm_button">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="@string/stop_alarm"
+            android:textSize="22sp"
+            android:textColor="#000000"
+            android:textStyle="bold" />
+
+    </FrameLayout>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="60dp"
-        android:textSize="15sp"
-        android:textColor="#7A8699"
+        android:layout_marginTop="40dp"
+        android:textSize="14sp"
+        android:textColor="#5A6577"
         android:gravity="center"
-        android:text="اضغط على الشاشة لإيقاف التنبيه" />
+        android:text="@string/alarm_tap_anywhere_hint" />
 
 </LinearLayout>

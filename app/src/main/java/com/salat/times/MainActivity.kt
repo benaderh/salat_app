@@ -2,10 +2,13 @@ package com.salat.times
 
 import android.app.AlarmManager
 import android.app.AlertDialog
+import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.os.Handler
 import android.os.Looper
 import android.view.LayoutInflater
@@ -100,6 +103,7 @@ class MainActivity : AppCompatActivity() {
         maybeRequestBatteryExemption()
         maybeRequestStoragePermission()
         ensureExactAlarmPermission()
+        ensureFullScreenIntentPermission()
         AlarmScheduler.rescheduleAll(this)
 
         updateDayState()
@@ -439,10 +443,41 @@ class MainActivity : AppCompatActivity() {
             val am = getSystemService(Context.ALARM_SERVICE) as AlarmManager
             if (!am.canScheduleExactAlarms()) {
                 try {
-                    startActivity(Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM))
+                    startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM))
                 } catch (e: Exception) {
                     // certains OEM n'ont pas cet ecran, ignorer
                 }
+            }
+        }
+    }
+
+    /**
+     * Android 14 (API 34) a rendu USE_FULL_SCREEN_INTENT une permission runtime.
+     * Sans elle, le fullScreenIntent de la notification ne s'affiche pas et
+     * l'utilisateur ne voit jamais l'ecran d'alarme.
+     * On verifie ici et on guide l'utilisateur vers les parametres si necessaire.
+     */
+    private fun ensureFullScreenIntentPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) { // API 34
+            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            if (!nm.canUseFullScreenIntent()) {
+                AlertDialog.Builder(this)
+                    .setTitle(getString(R.string.fullscreen_perm_title))
+                    .setMessage(getString(R.string.fullscreen_perm_body))
+                    .setPositiveButton(getString(R.string.fullscreen_perm_grant)) { _, _ ->
+                        try {
+                            startActivity(
+                                Intent(
+                                    Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
+                                    Uri.parse("package:$packageName")
+                                )
+                            )
+                        } catch (_: Exception) {
+                            // Certains OEM n'ont pas cet ecran
+                        }
+                    }
+                    .setNegativeButton(getString(R.string.fullscreen_perm_skip), null)
+                    .show()
             }
         }
     }
