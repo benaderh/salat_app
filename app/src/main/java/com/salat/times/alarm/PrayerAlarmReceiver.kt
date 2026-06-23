@@ -8,6 +8,7 @@ import android.media.MediaPlayer
 import android.os.Build
 import android.os.Environment
 import androidx.core.content.ContextCompat
+import com.salat.times.AlarmActivity
 import com.salat.times.data.RingerModeStore
 import java.io.File
 
@@ -20,6 +21,24 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
                 val isBefore = intent.getBooleanExtra(AlarmScheduler.EXTRA_IS_BEFORE, false)
                 val volume = intent.getFloatExtra(AlarmScheduler.EXTRA_VOLUME, 1.0f)
 
+                // IMPORTANT : Lancer AlarmActivity DIRECTEMENT depuis le receiver.
+                // Un BroadcastReceiver declenche par une alarme exacte a le privilege
+                // systeme de demarrer des Activities, meme sur Android 10+.
+                // Le service foreground n'a PAS ce privilege (bloque par le systeme).
+                try {
+                    val alarmActivityIntent = Intent(context, AlarmActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                                Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                                Intent.FLAG_ACTIVITY_NO_USER_ACTION
+                        putExtra(AlarmActivity.EXTRA_LABEL, label)
+                        putExtra(AlarmActivity.EXTRA_IS_BEFORE, isBefore)
+                    }
+                    context.startActivity(alarmActivityIntent)
+                } catch (_: Exception) {
+                    // Fallback : le fullScreenIntent du service prendra le relais
+                }
+
+                // Demarrer le service foreground pour jouer le son + notification
                 val serviceIntent = Intent(context, AthanPlaybackService::class.java).apply {
                     putExtra(AthanPlaybackService.EXTRA_LABEL, label)
                     putExtra(AthanPlaybackService.EXTRA_SOUND_PATH, soundPath)
