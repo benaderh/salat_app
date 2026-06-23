@@ -84,7 +84,11 @@
             android:name=".AlarmActivity"
             android:exported="false"
             android:excludeFromRecents="true"
+            android:launchMode="singleInstance"
+            android:taskAffinity=".alarm"
             android:screenOrientation="portrait"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
             android:theme="@style/Theme.SalatTimes.Fullscreen" />
 
         <!-- Recepteur des alarmes exactes (avant + a l'heure) -->
