@@ -102,6 +102,7 @@ class MainActivity : AppCompatActivity() {
 
         maybeRequestBatteryExemption()
         maybeRequestStoragePermission()
+        ensureNotificationPermission()
         ensureExactAlarmPermission()
         ensureFullScreenIntentPermission()
         AlarmScheduler.rescheduleAll(this)
@@ -113,6 +114,9 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         // Reflechir les eventuels changements (ville/alarmes modifies dans les ecrans de reglages)
         prefs = PrefsManager(this)
+        // Reprogramme a chaque retour dans l'app : prend en compte les permissions qui viennent
+        // d'etre accordees (alarmes exactes, notifications) et garantit 3 jours d'avance.
+        try { AlarmScheduler.rescheduleAll(this) } catch (_: Exception) { }
         renderDay()
         handler.post(tickRunnable)
     }
@@ -434,6 +438,24 @@ class MainActivity : AppCompatActivity() {
             val granted = android.os.Environment.isExternalStorageManager()
             if (!granted && !prefs.storagePromptShown) {
                 startActivity(Intent(this, StoragePermissionActivity::class.java))
+            }
+        }
+    }
+
+    /**
+     * Android 13+ : POST_NOTIFICATIONS est une permission runtime, refusee par defaut.
+     * Sans elle, la notification de l'alarme (et son fullScreenIntent) ne s'affiche pas,
+     * donc l'ecran d'alarme n'apparait pas quand le telephone est utilise ou verrouille.
+     */
+    private fun ensureNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val granted = androidx.core.content.ContextCompat.checkSelfPermission(
+                this, android.Manifest.permission.POST_NOTIFICATIONS
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            if (!granted) {
+                androidx.core.app.ActivityCompat.requestPermissions(
+                    this, arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 4711
+                )
             }
         }
     }

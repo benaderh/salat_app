@@ -35,6 +35,7 @@ class AthanPlaybackService : Service() {
 
     private var mediaPlayer: MediaPlayer? = null
     private var wakeLock: PowerManager.WakeLock? = null
+    private var focusRequest: android.media.AudioFocusRequest? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
@@ -66,11 +67,13 @@ class AthanPlaybackService : Service() {
             NotificationManagerCompat.from(this).notify(NOTIF_ID, notification)
         } catch (_: SecurityException) { }
 
+        // Le son passe en PREMIER : c'est le plus important, il ne doit jamais attendre
+        // l'affichage de l'ecran d'alarme.
+        playSound(soundPath, volume)
+
         // Fallback : lancer AlarmActivity directement si le fullScreenIntent
         // risque de ne pas fonctionner (Android 14+ sans permission, ou OEM restrictif)
         launchAlarmActivityDirect(label, isBefore)
-
-        playSound(soundPath, volume)
         return START_NOT_STICKY
     }
 
@@ -170,41 +173,90 @@ class AthanPlaybackService : Service() {
         ).apply { acquire(5 * 60 * 1000L) } // max 5 min de securite
     }
 
+    /**
+     * Joue le son d'alarme avec une cascade de secours :
+     *   1) le fichier mp3 choisi par l'utilisateur
+     *   2) la sonnerie d'alarme par defaut du telephone
+     *   3) la sonnerie de notification, puis la sonnerie d'appel
+     * Avant, si le fichier mp3 etait illisible (permission de stockage refusee, fichier
+     * deplace...), le service s'arretait en silence : l'alarme "ne sonnait pas".
+     */
     private fun playSound(soundPath: String?, volume: Float) {
-        try {
-            mediaPlayer = MediaPlayer().apply {
-                setAudioAttributes(
+        requestAudioFocus()
+
+        val sources = mutableListOf<(MediaPlayer) -> Unit>()
+        if (!soundPath.isNullOrBlank() && File(soundPath).exists()) {
+            sources.add { it.setDataSource(soundPath) }
+        }
+        for (type in intArrayOf(
+            android.media.RingtoneManager.TYPE_ALARM,
+            android.media.RingtoneManager.TYPE_NOTIFICATION,
+            android.media.RingtoneManager.TYPE_RINGTONE
+        )) {
+            val uri = try {
+                android.media.RingtoneManager.getActualDefaultRingtoneUri(this, type)
+            } catch (_: Exception) { null }
+            if (uri != null) {
+                sources.add { it.setDataSource(this, uri) }
+            }
+        }
+
+        for (setSource in sources) {
+            val mp = MediaPlayer()
+            try {
+                mp.setAudioAttributes(
                     AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_ALARM)
                         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                         .build()
                 )
-                if (!soundPath.isNullOrBlank() && File(soundPath).exists()) {
-                    setDataSource(soundPath)
-                } else {
-                    val defaultUri = android.media.RingtoneManager.getActualDefaultRingtoneUri(
-                        this@AthanPlaybackService, android.media.RingtoneManager.TYPE_ALARM
-                    )
-                    if (defaultUri != null) {
-                        setDataSource(this@AthanPlaybackService, defaultUri)
-                    }
-                }
-                isLooping = false
+                setSource(mp)
+                mp.isLooping = false
                 // Appliquer le volume relatif choisi par l'utilisateur (0.0 – 1.0)
-                setVolume(volume, volume)
-                setOnCompletionListener { stopSelfSafely() }
-                setOnErrorListener { _, _, _ -> stopSelfSafely(); true }
-                prepare()
-                start()
+                mp.setVolume(volume, volume)
+                mp.setOnCompletionListener { stopSelfSafely() }
+                mp.setOnErrorListener { _, _, _ -> stopSelfSafely(); true }
+                mp.prepare()
+                mp.start()
+                mediaPlayer = mp
+                return
+            } catch (e: Exception) {
+                try { mp.release() } catch (_: Exception) { }
             }
-        } catch (e: Exception) {
-            stopSelfSafely()
         }
+        // Aucune source n'a pu etre lue
+        stopSelfSafely()
+    }
+
+    /** Demande le focus audio (alarme) : met en pause la musique/video en cours. */
+    private fun requestAudioFocus() {
+        try {
+            val am = getSystemService(AUDIO_SERVICE) as AudioManager
+            val attrs = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+            val req = android.media.AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE)
+                .setAudioAttributes(attrs)
+                .setOnAudioFocusChangeListener { }
+                .build()
+            am.requestAudioFocus(req)
+            focusRequest = req
+        } catch (_: Exception) { }
+    }
+
+    private fun abandonAudioFocus() {
+        try {
+            val am = getSystemService(AUDIO_SERVICE) as AudioManager
+            focusRequest?.let { am.abandonAudioFocusRequest(it) }
+        } catch (_: Exception) { }
+        focusRequest = null
     }
 
     private fun stopSelfSafely() {
         try { mediaPlayer?.stop(); mediaPlayer?.release() } catch (_: Exception) { }
         mediaPlayer = null
+        abandonAudioFocus()
         wakeLock?.let { if (it.isHeld) it.release() }
         stopForeground(STOP_FOREGROUND_REMOVE)
         // Annule aussi la notification qui persistait (ongoing=true)

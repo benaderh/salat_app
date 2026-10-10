@@ -23,7 +23,11 @@ import java.time.ZoneId
  */
 object AlarmScheduler {
 
-    private const val DAYS_AHEAD = 2
+    // 3 jours d'avance : meme si l'app n'est pas ouverte pendant un moment, les alarmes
+    // restent programmees. Chaque alarme qui sonne reprogramme ensuite les suivantes
+    // (voir PrayerAlarmReceiver), donc la chaine ne s'arrete plus jamais.
+    private const val DAYS_AHEAD = 3
+    private const val MAX_CANCEL_DAYS = 5
 
     // request code scheme: prayerOrdinal*10 + type(0=before,1=attime,2=silentStart,3=silentEnd) + dayOffset*100
     private fun requestCode(prayer: PrayerKey, type: Int, dayOffset: Int): Int =
@@ -93,11 +97,17 @@ object AlarmScheduler {
             // attendra la fin du son (via un broadcast) avant d'activer le silence.
             if (cfg.silentEnabled) {
                 val silentStartDt = prayerDateTime.plusMinutes(cfg.silentDelayMinutes.toLong())
+                val silentEndDt = silentStartDt.plusMinutes(cfg.silentDurationMinutes.toLong())
                 if (silentStartDt.isAfter(now)) {
                     scheduleSilentStart(
                         context, silentStartDt, key, dayOffset,
                         cfg.silentDurationMinutes
                     )
+                } else if (silentEndDt.isAfter(now)) {
+                    // On est PENDANT la periode silencieuse (ex: l'app a ete reprogrammee entre
+                    // le debut et la fin). Il faut conserver l'alarme de FIN, sinon le telephone
+                    // resterait en silencieux pour toujours.
+                    scheduleSilentEndOnly(context, silentEndDt, key, dayOffset)
                 }
             }
         }
@@ -156,6 +166,27 @@ object AlarmScheduler {
 
         // Programme aussi la fin du silence
         val endMillis = triggerMillis + durationMinutes * 60_000L
+        scheduleSilentEndMillis(context, am, endMillis, prayer, dayOffset)
+    }
+
+    private fun scheduleSilentEndOnly(
+        context: Context,
+        endAt: LocalDateTime,
+        prayer: PrayerKey,
+        dayOffset: Int
+    ) {
+        val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val endMillis = endAt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        scheduleSilentEndMillis(context, am, endMillis, prayer, dayOffset)
+    }
+
+    private fun scheduleSilentEndMillis(
+        context: Context,
+        am: AlarmManager,
+        endMillis: Long,
+        prayer: PrayerKey,
+        dayOffset: Int
+    ) {
         val endIntent = Intent(context, SilentModeEndReceiver::class.java).apply {
             action = ACTION_SILENT_END
         }
@@ -210,22 +241,47 @@ object AlarmScheduler {
         }
     }
 
+    /**
+     * Annule toutes les alarmes programmees.
+     *
+     * IMPORTANT : un PendingIntent est identifie par (requestCode + action + classe cible).
+     * Les intents d'annulation doivent donc avoir EXACTEMENT la meme action que ceux utilises
+     * a la programmation, sinon am.cancel() ne trouve rien et les anciennes alarmes
+     * (desactivees, ancienne ville, ancien horaire) continuent de sonner.
+     * FLAG_NO_CREATE evite de creer inutilement un PendingIntent juste pour l'annuler.
+     */
     fun cancelAll(context: Context) {
         val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        for (dayOffset in 0 until DAYS_AHEAD) {
+        // On annule sur une plage plus large que DAYS_AHEAD pour nettoyer d'anciennes versions
+        for (dayOffset in 0 until MAX_CANCEL_DAYS) {
             for (prayer in PrayerKey.values()) {
-                for (type in listOf(TYPE_BEFORE, TYPE_AT_TIME, TYPE_SILENT_START, TYPE_SILENT_END)) {
-                    val intent = if (type == TYPE_SILENT_END)
-                        Intent(context, SilentModeEndReceiver::class.java)
-                    else
-                        Intent(context, PrayerAlarmReceiver::class.java)
-                    val pi = PendingIntent.getBroadcast(
-                        context, requestCode(prayer, type, dayOffset), intent,
-                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                    )
-                    am.cancel(pi)
-                }
+                cancelOne(context, am, requestCode(prayer, TYPE_BEFORE, dayOffset),
+                    PrayerAlarmReceiver::class.java, ACTION_PRAYER_ALARM)
+                cancelOne(context, am, requestCode(prayer, TYPE_AT_TIME, dayOffset),
+                    PrayerAlarmReceiver::class.java, ACTION_PRAYER_ALARM)
+                cancelOne(context, am, requestCode(prayer, TYPE_SILENT_START, dayOffset),
+                    PrayerAlarmReceiver::class.java, ACTION_SILENT_START)
+                cancelOne(context, am, requestCode(prayer, TYPE_SILENT_END, dayOffset),
+                    SilentModeEndReceiver::class.java, ACTION_SILENT_END)
             }
+        }
+    }
+
+    private fun cancelOne(
+        context: Context,
+        am: AlarmManager,
+        requestCode: Int,
+        receiver: Class<*>,
+        action: String
+    ) {
+        val intent = Intent(context, receiver).apply { this.action = action }
+        val pi = PendingIntent.getBroadcast(
+            context, requestCode, intent,
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+        )
+        if (pi != null) {
+            am.cancel(pi)
+            pi.cancel()
         }
     }
 

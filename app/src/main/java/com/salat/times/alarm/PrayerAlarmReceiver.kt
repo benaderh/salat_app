@@ -46,6 +46,13 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
                     putExtra(AthanPlaybackService.EXTRA_VOLUME, volume)
                 }
                 ContextCompat.startForegroundService(context, serviceIntent)
+
+                // REARMEMENT EN CHAINE : chaque alarme qui sonne reprogramme les suivantes.
+                // Avant, les alarmes n'etaient programmees que quand l'app etait ouverte ou au
+                // redemarrage : si le systeme (HiOS/Tecno) tuait l'app ou si l'utilisateur ne
+                // l'ouvrait pas pendant 2 jours, plus aucune alarme ne sonnait.
+                // On le fait APRES avoir lance le son pour ne rien retarder.
+                rearm(context)
             }
 
             AlarmScheduler.ACTION_SILENT_START -> {
@@ -68,7 +75,16 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
                 }
                 // La fin du silence est deja programmee separement par AlarmScheduler
                 // (SilentModeEndReceiver), donc rien d'autre a faire ici.
+                rearm(context)
             }
+        }
+    }
+
+    private fun rearm(context: Context) {
+        try {
+            AlarmScheduler.rescheduleAll(context)
+        } catch (_: Exception) {
+            // Ne jamais faire planter le receiver : l'alarme en cours a deja ete traitee
         }
     }
 
