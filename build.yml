@@ -11,13 +11,49 @@ jobs:
 
     steps:
       - name: Checkout du code
-        uses: actions/checkout@v6          # modifié (v4 -> v6)
+        uses: actions/checkout@v6
 
       - name: Configuration de Java 17
-        uses: actions/setup-java@v5        # modifié (v4 -> v5)
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
+
+      - name: Ranger les fichiers dans la bonne arborescence
+        run: |
+          # Range les fichiers deposes "a plat" a la racine du depot vers la bonne arborescence Android.
+          # Sans effet si un fichier est deja au bon endroit et absent de la racine.
+          set -e
+          P=app/src/main/java/com/salat/times
+
+          place() { # place <fichier-a-la-racine> <dossier-destination> [nom-destination]
+            local src="$1" dir="$2" name="${3:-$1}"
+            if [ -f "$src" ]; then
+              mkdir -p "$dir"
+              cp -f "$src" "$dir/$name"
+              echo "range : $src -> $dir/$name"
+            fi
+          }
+
+          # Fichier Gradle racine : "build (9).gradle" est le bon, "build.gradle" est celui de l'app (a la racine par erreur)
+          if [ -f "build (9).gradle" ]; then cp -f "build (9).gradle" build.gradle; echo "range : build (9).gradle -> build.gradle"; fi
+
+          for f in AlarmActivity BatteryPermissionActivity MainActivity SalatApp SettingsAlarmesActivity SettingsVilleActivity SoundPickerActivity StoragePermissionActivity; do place "$f.kt" "$P"; done
+          for f in AlarmLog AlarmScheduler AthanPlaybackService BootReceiver PrayerAlarmReceiver SilentMode SilentModeEndReceiver; do place "$f.kt" "$P/alarm"; done
+          for f in PrefsManager RingerModeStore SalatDataRepository; do place "$f.kt" "$P/data"; done
+          place Models.kt "$P/model"
+          place ArabicNames.kt "$P/util"
+
+          place AndroidManifest.xml app/src/main
+          for f in activity_alarm activity_battery_permission activity_main activity_settings_alarmes activity_settings_ville activity_sound_picker activity_storage_permission item_prayer_alarm_card item_prayer_row item_ville; do place "$f.xml" app/src/main/res/layout; done
+          for f in bg_stop_alarm_button ic_launcher_background ic_launcher_foreground ic_more_vert nav_button_bg; do place "$f.xml" app/src/main/res/drawable; done
+          for f in colors dimens strings themes; do place "$f.xml" app/src/main/res/values; done
+          place salat_data.json app/src/main/assets
+
+          # Le fichier Gradle de l'app doit rester dans app/
+          test -f app/build.gradle || { echo "ERREUR : app/build.gradle manquant"; exit 1; }
+          grep -q "buildscript" build.gradle || { echo "ERREUR : build.gradle racine invalide"; exit 1; }
+          echo "arborescence OK"
 
       - name: Rendre gradlew executable
         run: chmod +x gradlew
@@ -31,7 +67,7 @@ jobs:
         run: ./gradlew assembleRelease --no-daemon
 
       - name: Upload de l'APK genere
-        uses: actions/upload-artifact@v7   # modifié (v4 -> v7)
+        uses: actions/upload-artifact@v7
         with:
           name: salat-times-apk
           path: app/build/outputs/apk/release/*.apk
