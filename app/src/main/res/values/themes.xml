@@ -9,6 +9,13 @@
         <item name="android:statusBarColor">@color/background_dark</item>
         <item name="android:navigationBarColor">@color/background_dark</item>
         <item name="android:textColor">@color/text_primary</item>
+        <!-- Popup menu dark background so light text is readable -->
+        <item name="popupMenuStyle">@style/DarkPopupMenu</item>
+        <item name="android:popupMenuStyle">@style/DarkPopupMenu</item>
+    </style>
+
+    <style name="DarkPopupMenu" parent="@style/Widget.MaterialComponents.PopupMenu">
+        <item name="android:popupBackground">@color/surface_dark</item>
     </style>
 
     <style name="Theme.SalatTimes.Fullscreen" parent="Theme.SalatTimes">
