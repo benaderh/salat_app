@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Croissant dore -->
+    <path
+        android:fillColor="#D4AF37"
+        android:pathData="M70,28 C58,28 48,38 48,50 C48,62 58,72 70,72 C72,72 74,71.7 76,71.2 C68,68 62,60 62,50 C62,40 68,32 76,28.8 C74,28.3 72,28 70,28 Z" />
+    <!-- Petite etoile -->
+    <path
+        android:fillColor="#D4AF37"
+        android:pathData="M82,38 L83.5,42.5 L88,44 L83.5,45.5 L82,50 L80.5,45.5 L76,44 L80.5,42.5 Z" />
+    <!-- Coupole / minaret simplifie -->
+    <path
+        android:fillColor="#9AA5B5"
+        android:pathData="M40,86 L40,66 C40,58 46,52 54,52 C62,52 68,58 68,66 L68,86 Z" />
+    <path
+        android:fillColor="#9AA5B5"
+        android:pathData="M34,86 L74,86 L74,90 L34,90 Z" />
+</vector>
